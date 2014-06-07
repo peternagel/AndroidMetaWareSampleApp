@@ -27,7 +27,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="BleDeviceController">
+            android:name="com.mbientlab.metawear.app.BLEDeviceController">
         </activity>
         <service android:name="com.mbientlab.metawear.api.MetaWearBLEService" />
     </application>
