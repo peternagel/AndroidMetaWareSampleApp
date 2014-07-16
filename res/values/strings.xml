@@ -32,8 +32,7 @@ contact MbientLab Inc, at www.mbientlab.com.
 -->
 <resources>
 
-    <string name="app_name">MetaWearApp</string>
-    <string name="hello_world">Hello world!</string>
+    <string name="app_name">MetaWear</string>
     <string name="label_mac_address">MAC Address</string>
     <string name="label_accelerometer">Accelerometer</string>
     <string name="label_led_state">LED State</string>
@@ -47,9 +46,81 @@ contact MbientLab Inc, at www.mbientlab.com.
     <string name="label_temperature">Temperature</string>
     <string name="label_accelerometer_data">Accelerometer Data</string>
     <string name="label_freefall_status">In Free Fall</string>
-    <string name="label_led_red">LED Red Value</string>
-    <string name="label_led_green">LED Green Value</string>
-    <string name="label_led_blue">LED Blue Value</string>
+    <string name="label_led_red">Red</string>
+    <string name="label_led_green">Green</string>
+    <string name="label_led_blue">Blue</string>
     <string name="label_commands">Commands</string>
+    <string name="title_module_detail">Module Detail</string>
+    
+    <string name="mw_about_text">The MetaWear app provides a GUI for interacting with a MetaWear board and serves as an example on how to use the MetaWear API.</string>
 
+    <string name="font_path">fonts/trebucbd.ttf</string>
+    <string name="normal_font_path">fonts/trebuc.ttf</string>
+    
+    <string name="permission_log_label">read and write log</string>
+    <string name="permission_log_description">Allows the app to write and read from Nordic Semiconductor Event log</string>
+    
+    <string name="action_about">About</string>
+    <string name="action_settings">Settings</string>
+    <string name="action_connect">CONNECT</string>
+    <string name="action_select">SELECT DEVICE</string>
+    <string name="action_disconnect">DISCONNECT</string>
+    
+    <string name="drawer_open">Open</string>
+    <string name="drawer_close">Close</string>
+    <string name="drawer_plugins">PLUGINS</string>
+    <string name="drawer_plugin_mcp">nRF Master Control Panel</string>
+    
+    <string name="battery">%d%%</string>
+    <string name="progress">%d%%</string>
+    <string name="not_available">n/a</string>
+    <string name="not_available_value">" - "</string>
+    <string name="no_ble">Device doesn\'t have BLE support!</string>
+    <string name="no_apps">No profiles found.</string>
+    <string name="not_supported">The device does not have required services.</string>
+    <string name="no_application">Web Borswer application is not available.</string>
+    <string name="scanner_title">Select device:</string>
+    <string name="scanner_empty">No device found</string>
+    <string name="scanner_action_scan">Scan</string>
+    <string name="scanner_action_cancel">Cancel</string>
+    <string name="scanner_subtitle_bonded">BONDED DEVICES:</string>
+    <string name="scanner_subtitle__not_bonded">AVAILABLE DEVICES:</string>
+    
+    <string name="bonding">Bonding with the device&#8230;</string>
+    <string name="bonded">The device is now bonded.</string>
+    
+    <string name="about_title">About</string>
+    <string name="about_version">\n\nVersion: %s</string>
+    <string name="about_text">The nRF Toolbox is a container application that stores your Nordic Semiconductor apps in one location.</string>
+    <string name="label_connect">Connect</string>
+    <string name="label_disconnect">Disconnect</string>
+    <string name="label_dfu">dfu</string>
+    <string name="label_led_on">ON</string>
+    <string name="label_led_blink">BLINK</string>
+    <string name="label_led_off">OFF</string>
+    <string name="label_accelerometer_motion">Motion XYZ</string>
+    <string name="label_accelerometer_freefall">Free Fall</string>
+    <string name="label_accelerometer_orientation">Orientation</string>
+    <string name="label_enable_motion_data">Enable Motion Data</string>
+    <string name="label_enable_freefall_detection">Enable FreeFall Detection</string>
+    <string name="label_enable_orientation">Enable Orientation Detection</string>
+    <string name="label_dfu_button">Launches the DFU activity</string>
+    <string name="label_ibeacon_uuid">UUID</string>
+    <string name="label_ibeacon_major">Major</string>
+    <string name="label_ibeacon_minor">Minor</string>
+    <string name="label_ibeacon_rx">RX Power</string>
+    <string name="label_ibeacon_tx">TX Power</string>
+    <string name="label_ibeacon_period">Period</string>
+    <string name="label_ibeacon_enable">Enable</string>
+    <string name="label_ibeacon_disable">Disable</string>
+    <string name="label_haptic_freq">Frequency</string>
+    <string name="label_led_on_intensity">On Intensity</string>
+    <string name="label_led_off_intensity">Off Intensity</string>
+    <string name="label_led_pulse_rise">Pulse Rise</string>
+    <string name="label_led_pulse_on">Pulse On</string>
+    <string name="label_led_pulse_fall">Pulse Fall</string>
+    <string name="label_led_pulse_period">Pulse Period</string>
+    <string name="label_led_pulse_offset">Pulse Offset</string>
+    <string name="label_led_pulse_repeat">Repeat Count</string>
+    <string name="label_led_color_channel">Color Channel</string>
 </resources>
