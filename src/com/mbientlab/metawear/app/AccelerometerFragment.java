@@ -30,25 +30,35 @@
  */
 package com.mbientlab.metawear.app;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map.Entry;
+import java.util.ArrayList;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
-import com.mbientlab.metawear.api.MetaWearController;
+import com.androidplot.xy.LineAndPointFormatter;
+import com.androidplot.xy.SimpleXYSeries;
+import com.androidplot.xy.XYPlot;
+import com.androidplot.xy.SimpleXYSeries.ArrayFormat;
 import com.mbientlab.metawear.api.Module;
-import com.mbientlab.metawear.api.MetaWearController.DeviceCallbacks;
 import com.mbientlab.metawear.api.controller.Accelerometer;
 import com.mbientlab.metawear.api.controller.Accelerometer.Component;
 
 import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup;
-import android.widget.CompoundButton;
-import android.widget.Switch;
-import android.widget.TextView;
+import android.widget.Button;
+import android.widget.Toast;
 
 /**
  * @author etsai
@@ -58,31 +68,23 @@ public class AccelerometerFragment extends ModuleFragment {
     private Accelerometer accelController;
     private Accelerometer.Callbacks mCallback= new Accelerometer.Callbacks() {
         public void receivedDataValue(short x, short y, short z) {
-            if (isVisible()) {
-                String motion= String.format(Locale.US, "(%d, %d, %d)", x, y, z);
-                ((TextView) getView().findViewById(R.id.motion_data)).setText(motion);
-            }
-        }
-    };
-    private DeviceCallbacks dCallback= new MetaWearController.DeviceCallbacks() {
-        @Override
-        public void connected() {
-            for(final Entry<Integer, Component> it: switches.entrySet()) {
-                if (!values.containsKey(it.getKey()) || !values.get(it.getKey())) {
-                    accelController.disableNotification(switches.get(it.getKey()));
-                } else {
-                    accelController.enableNotification(switches.get(it.getKey()));
+            final float xG= (float)x / 1024, yG= (float)y / 1024, zG= (float)z / 1024;
+            if (fos != null) {
+                try {
+                    fos.write(String.format("%1$.3f,%1$.3f,%1$.3f%n", xG, yG, zG).getBytes());
+                } catch (IOException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
                 }
+            }
+            if (xValues != null) {
+                xValues.add(xG);
+                yValues.add(yG);
+                zValues.add(zG);
             }
         }
     };
     private HashMap<Integer, Boolean> values= new HashMap<>();
-    private static final HashMap<Integer, Component> switches= new HashMap<>();
-    static {
-        switches.put(R.id.switch1, Component.DATA);
-        switches.put(R.id.switch2, Component.FREE_FALL);
-        switches.put(R.id.switch3, Component.ORIENTATION);
-    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -92,7 +94,6 @@ public class AccelerometerFragment extends ModuleFragment {
     
     @Override
     public void onDestroy() {
-        mwController.removeDeviceCallback(dCallback);
         mwController.removeModuleCallback(mCallback);
         super.onDestroy();
     }
@@ -102,7 +103,6 @@ public class AccelerometerFragment extends ModuleFragment {
         super.onServiceConnected(name, service);
         accelController= (Accelerometer)this.mwController.getModuleController(Module.ACCELEROMETER);
         this.mwController.addModuleCallback(mCallback);
-        this.mwController.addDeviceCallback(dCallback);
     }
     
     @Override
@@ -110,28 +110,110 @@ public class AccelerometerFragment extends ModuleFragment {
         super.onSaveInstanceState(outState);
         outState.putSerializable("STATE_VALUES", values);
     }
-    
+
+    private boolean recording= false;
+    private XYPlot accelHistoryPlot;
+    private SimpleXYSeries xAxis, yAxis, zAxis;
+    private ConcurrentLinkedQueue<Float> xValues, yValues, zValues;
+
+    private FileOutputStream fos= null;
+    private static final String FILENAME= "metawear_accelerometer_data_50hz_2g.csv";
     @SuppressWarnings("unchecked")
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         if (savedInstanceState != null) {
             values= (HashMap<Integer, Boolean>) savedInstanceState.getSerializable("STATE_VALUES");
         }
-        for(final Entry<Integer, Component> it: switches.entrySet()) {
-            Switch componentSwitch= (Switch) view.findViewById(it.getKey());
-            if (values.containsKey(it.getKey())) {
-                componentSwitch.setChecked(values.get(it.getKey()));
-            }
-            componentSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                    values.put(it.getKey(), isChecked);
-                    if (accelController != null) {
-                        if (isChecked) accelController.enableNotification(it.getValue());
-                        else accelController.disableNotification(it.getValue());
+        
+        xAxis= new SimpleXYSeries("X Axis");
+        xAxis.useImplicitXVals();
+        yAxis= new SimpleXYSeries("Y Axis");
+        yAxis.useImplicitXVals();
+        zAxis= new SimpleXYSeries("Z Axis");
+        zAxis.useImplicitXVals();
+        
+        accelHistoryPlot= (XYPlot) view.findViewById(R.id.aprHistoryPlot);
+        accelHistoryPlot.addSeries(xAxis, new LineAndPointFormatter(Color.RED, Color.TRANSPARENT, Color.TRANSPARENT, null));
+        accelHistoryPlot.addSeries(yAxis, new LineAndPointFormatter(Color.GREEN, Color.TRANSPARENT, Color.TRANSPARENT, null));
+        accelHistoryPlot.addSeries(zAxis, new LineAndPointFormatter(Color.BLUE, Color.TRANSPARENT, Color.TRANSPARENT, null));
+        accelHistoryPlot.setTicksPerRangeLabel(3);
+        accelHistoryPlot.getGraphWidget().getDomainLabelPaint().setColor(Color.TRANSPARENT);
+        accelHistoryPlot.setRangeLabel("Measured g's");
+        accelHistoryPlot.getRangeLabelWidget().pack();
+        
+        ((Button) view.findViewById(R.id.button1)).setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (!recording) {
+                    accelController.setComponentConfiguration(Component.DATA, 
+                            new byte[] {0, 0, 0x20, 0, 0});
+                    accelController.enableNotification(Component.DATA);
+                    xValues= new ConcurrentLinkedQueue<Float>();
+                    yValues= new ConcurrentLinkedQueue<Float>();
+                    zValues= new ConcurrentLinkedQueue<Float>();
+                    try {
+                        fos = AccelerometerFragment.this.getActivity().openFileOutput(FILENAME, Context.MODE_WORLD_READABLE);
+                    } catch (FileNotFoundException e) {
+                    //TODO Auto-generated catch block
+                        e.printStackTrace();
                     }
+                    recording= true;
+                    ((Button)v).setText(R.string.label_accelerometer_data_stop);
+                } else {
+                    accelController.disableNotification(Component.DATA);
+                    try {
+                        if (fos != null) {
+                            fos.close();
+                        }
+                        fos= null;
+                    } catch (FileNotFoundException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                    ((Button)v).setText(R.string.label_accelerometer_data_record);
+                    recording= false;
                 }
-            });
-        }
+            }
+        });
+        ((Button) view.findViewById(R.id.button2)).setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (recording) {
+                    Toast.makeText(AccelerometerFragment.this.getActivity(), "Stop data recording before plotting", 
+                            Toast.LENGTH_SHORT).show();
+                } else if (accelHistoryPlot != null) {
+                    xAxis.setModel(new ArrayList<Float>(xValues), ArrayFormat.Y_VALS_ONLY);
+                    yAxis.setModel(new ArrayList<Float>(yValues), ArrayFormat.Y_VALS_ONLY);
+                    zAxis.setModel(new ArrayList<Float>(zValues), ArrayFormat.Y_VALS_ONLY);
+                    accelHistoryPlot.redraw();
+                }
+            }
+        });
+        ((Button) view.findViewById(R.id.button3)).setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(Intent.ACTION_SEND);
+                intent.setType("text/plain");
+                intent.putExtra(Intent.EXTRA_EMAIL, new String[] {"eric@mbientlab.com"});
+                intent.putExtra(Intent.EXTRA_SUBJECT, "subject here");
+                intent.putExtra(Intent.EXTRA_TEXT, "body text");
+                File file = AccelerometerFragment.this.getActivity().getFileStreamPath(FILENAME);
+                
+                if (!file.exists()) {
+                    Toast.makeText(AccelerometerFragment.this.getActivity(), "Record data before emailing", 
+                            Toast.LENGTH_SHORT).show();
+                } else if (recording) {
+                    Toast.makeText(AccelerometerFragment.this.getActivity(), "Stop recording before emailing the data", 
+                            Toast.LENGTH_SHORT).show();
+                } else {
+                    Uri uri = Uri.fromFile(file);
+                    intent.putExtra(Intent.EXTRA_STREAM, uri);
+                    startActivity(Intent.createChooser(intent, "Send email..."));
+                }
+            }
+        });
     }
 }

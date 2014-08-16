@@ -135,6 +135,13 @@
                     android:layout_height="wrap_content"
                     android:onClick="onSelectFileClicked"
                     android:text="@string/dfu_action_select_file" />
+                
+                <Button
+                    android:id="@+id/action_update_latest"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:onClick="onUpdateLatestClicked"
+                    android:text="@string/dfu_action_update_latest" />
 
                 <ImageView
                     android:layout_width="wrap_content"

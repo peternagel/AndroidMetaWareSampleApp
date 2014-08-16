@@ -98,6 +98,10 @@ contact MbientLab Inc, at www.mbientlab.com.
     <string name="label_led_on">ON</string>
     <string name="label_led_blink">BLINK</string>
     <string name="label_led_off">OFF</string>
+    <string name="label_accelerometer_data_record">Record</string>
+    <string name="label_accelerometer_data_stop">Stop</string>
+    <string name="label_accelerometer_data_plot">Plot</string>
+    <string name="label_accelerometer_data_email">Email</string>
     <string name="label_accelerometer_motion">Motion XYZ</string>
     <string name="label_accelerometer_freefall">Free Fall</string>
     <string name="label_accelerometer_orientation">Orientation</string>
@@ -123,4 +127,6 @@ contact MbientLab Inc, at www.mbientlab.com.
     <string name="label_led_pulse_offset">Pulse Offset</string>
     <string name="label_led_pulse_repeat">Repeat Count</string>
     <string name="label_led_color_channel">Color Channel</string>
+    <string name="label_led_high_intensity">High Intensity</string>
+    <string name="label_led_low_intensity">Low Intensity</string>
 </resources>

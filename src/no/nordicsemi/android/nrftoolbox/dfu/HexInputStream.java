@@ -83,6 +83,14 @@ import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DefaultHttpClient;
+
+import android.net.Uri;
+
 public class HexInputStream extends FilterInputStream {
 	private final int LINE_LENGTH = 16;
 	private final byte[] localBuf;
@@ -90,6 +98,7 @@ public class HexInputStream extends FilterInputStream {
 	private int pos;
 	private int size;
 	private int available, bytesRead;
+    private HttpGet httpGet;
 
 	/**
 	 * Creates the HEX Input Stream. The constructor calculates the size of the BIN content which is available through {@link #sizeInBytes()}. If HEX file is invalid then the bin size is 0. The
@@ -111,7 +120,23 @@ public class HexInputStream extends FilterInputStream {
 		available = calculateBinSize();
 	}
 
-	private int calculateBinSize() throws IOException {
+	/**
+     * @param entity
+	 * @throws IOException 
+	 * @throws IllegalStateException 
+     */
+    protected HexInputStream(final HttpGet httpGet) throws IllegalStateException, IOException {
+        // TODO Auto-generated constructor stub
+        super(new BufferedInputStream(new DefaultHttpClient().execute(httpGet).getEntity().getContent()));
+        localBuf = new byte[LINE_LENGTH];
+        localPos = LINE_LENGTH; // we are at the end of the local buffer, new one must be obtained
+        size = localBuf.length;
+        
+        this.httpGet= httpGet;
+        available = calculateBinSize();
+    }
+
+    private int calculateBinSize() throws IOException {
 		int binSize = 0;
 		final InputStream in = this.in;
 		in.mark(in.available());
@@ -151,7 +176,11 @@ public class HexInputStream extends FilterInputStream {
 				}
 			}
 		} finally {
-			in.reset();
+		    try {
+		        in.reset();
+		    } catch (IOException ex) {
+		        this.in= new BufferedInputStream(new DefaultHttpClient().execute(this.httpGet).getEntity().getContent());
+		    }
 		}
 	}
 

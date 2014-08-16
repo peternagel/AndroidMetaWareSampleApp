@@ -14,15 +14,17 @@
             android:layout_width="fill_parent"
             android:layout_height="wrap_content" 
             android:orientation="horizontal"
-            android:layout_weight="1" >
+            android:weightSum="1" >
 
             <TextView
                 android:layout_width="0dp"
-                android:layout_weight="0.35"
+                android:layout_weight="0.65"
                 android:text="@string/label_led_color_channel" />
 
             <Spinner
                 android:id="@+id/spinner1"
+                android:layout_weight="0.35"
+                android:max="31"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
 
@@ -32,22 +34,19 @@
             android:layout_width="fill_parent"
             android:layout_height="wrap_content" 
             android:orientation="horizontal"
-            android:layout_weight="1" >
+            android:weightSum="1" >
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_weight="0.35"
-                android:text="@string/label_led_on_intensity" />
+                android:text="@string/label_led_high_intensity" />
 
-            <EditText
-                android:id="@+id/editText1"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:ems="10"
-                android:inputType="number" >
-
-                <requestFocus />
-            </EditText>
+            <SeekBar
+                android:id="@+id/seekBar1"
+                android:layout_weight="0.65"
+                android:max="31"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
             
         </TableRow>
 
@@ -56,146 +55,19 @@
             android:layout_width="fill_parent"
             android:layout_height="wrap_content" 
             android:orientation="horizontal"
-            android:layout_weight="1" >
+            android:weightSum="1" >
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_weight="0.35"
-                android:text="@string/label_led_off_intensity" />
+                android:text="@string/label_led_low_intensity" />
 
-            <EditText
-                android:id="@+id/editText2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:ems="10"
-                android:inputType="number" />
+            <SeekBar
+                android:id="@+id/seekBar2"
+                android:layout_weight="0.65"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
             
-        </TableRow>
-
-        <TableRow
-            android:id="@+id/tableRow12"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content" 
-            android:orientation="horizontal"
-            android:layout_weight="1" >
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_weight="0.35"
-                android:text="@string/label_led_pulse_rise" />
-
-            <EditText
-                android:id="@+id/editText3"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:ems="10"
-                android:inputType="number" />
-
-        </TableRow>
-        
-        <TableRow
-            android:id="@+id/tableRow13"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content" 
-            android:orientation="horizontal"
-            android:layout_weight="1" >
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_weight="0.35"
-                android:text="@string/label_led_pulse_on" />
-
-            <EditText
-                android:id="@+id/editText4"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:ems="10"
-                android:inputType="number" />
-
-        </TableRow>
-        
-        <TableRow
-            android:id="@+id/tableRow14"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content" 
-            android:orientation="horizontal"
-            android:layout_weight="1" >
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_weight="0.35"
-                android:text="@string/label_led_pulse_fall" />
-
-            <EditText
-                android:id="@+id/editText5"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:ems="10"
-                android:inputType="number" />
-
-        </TableRow>
-        
-        <TableRow
-            android:id="@+id/tableRow15"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content" 
-            android:orientation="horizontal"
-            android:layout_weight="1" >
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_weight="0.35"
-                android:text="@string/label_led_pulse_period" />
-
-            <EditText
-                android:id="@+id/editText6"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:ems="10"
-                android:inputType="number" />
-
-        </TableRow>
-        
-        <TableRow
-            android:id="@+id/tableRow16"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content" 
-            android:orientation="horizontal"
-            android:layout_weight="1" >
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_weight="0.35"
-                android:text="@string/label_led_pulse_offset" />
-
-            <EditText
-                android:id="@+id/editText7"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:ems="10"
-                android:inputType="number" />
-
-        </TableRow>
-        
-        <TableRow
-            android:id="@+id/tableRow17"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content" 
-            android:orientation="horizontal"
-            android:layout_weight="1" >
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_weight="0.35"
-                android:text="@string/label_led_pulse_repeat" />
-
-            <EditText
-                android:id="@+id/editText8"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:ems="10"
-                android:inputType="number" />
-
         </TableRow>
     </TableLayout>
 
@@ -227,7 +99,7 @@
             android:id="@+id/button1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Button" />
+            android:text="Save" />
 
     </LinearLayout>
 

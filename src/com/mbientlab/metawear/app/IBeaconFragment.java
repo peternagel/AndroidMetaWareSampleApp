@@ -115,12 +115,15 @@ public class IBeaconFragment extends ModuleFragment {
     private DeviceCallbacks dCallback= new MetaWearController.DeviceCallbacks() {
         @Override
         public void connected() {
-            for(Integer it: editTextBoxes) {
-                EditText view= (EditText) getView().findViewById(it);
-                view.setEnabled(true);
+            if (isVisible()) {
+                for(Integer it: editTextBoxes) {
+                    EditText view= (EditText) getView().findViewById(it);
+                    view.setEnabled(true);
+                }
+            
+                ((Button) getView().findViewById(R.id.button1)).setEnabled(true);
+                ((Button) getView().findViewById(R.id.button2)).setEnabled(true);
             }
-            ((Button) getView().findViewById(R.id.button1)).setEnabled(true);
-            ((Button) getView().findViewById(R.id.button2)).setEnabled(true);
             
             for(IBeacon.Register it: IBeacon.Register.values()) {
                 ibeaconController.readSetting(it);
@@ -152,6 +155,14 @@ public class IBeaconFragment extends ModuleFragment {
     public void onViewCreated (View view, Bundle savedInstanceState) {
         if (savedInstanceState != null) {
             values= (HashMap<Integer, String>) savedInstanceState.getSerializable("STATE_VALUES");
+        }
+        if (mwController != null && mwController.isConnected()) {
+            for(Integer it: editTextBoxes) {
+                ((EditText) view.findViewById(it)).setEnabled(true);
+            }
+        
+            ((Button) view.findViewById(R.id.button1)).setEnabled(true);
+            ((Button) view.findViewById(R.id.button2)).setEnabled(true);
         }
         for(Entry<Integer, String> it: values.entrySet()) {
             ((EditText) view.findViewById(it.getKey())).setText(it.getValue());
@@ -252,6 +263,14 @@ public class IBeaconFragment extends ModuleFragment {
         mwController.removeModuleCallback(mCallbacks);
         mwController.removeDeviceCallback(dCallback);
         super.onDestroy();
+    }
+    
+    @Override
+    public void onResume () {
+        super.onResume();
+        for(Entry<Integer, String> it: values.entrySet()) {
+            ((EditText) getView().findViewById(it.getKey())).setText(it.getValue());
+        }
     }
     
     @Override

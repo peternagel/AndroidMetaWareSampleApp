@@ -53,6 +53,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.SeekBar;
 import android.widget.Spinner;
 
 /**
@@ -62,21 +63,26 @@ import android.widget.Spinner;
 public class LEDFragment extends ModuleFragment {
     private LED ledController;
     
-    private HashMap<ColorChannel, HashMap<Integer, String>> values= new HashMap<>();
-    private HashMap<Integer, EditText> editTextRefs= new HashMap<>();
+    /*
+     * .withLowIntensity((byte)seekBarRefs.get(R.id.seekBar2).getProgress())
+                        .withRiseTime(extractShort(R.id.editText3))
+                        .withHighTime(extractShort(R.id.editText4)).withFallTime(extractShort(R.id.editText5))
+                        .withPulseDuration(extractShort(R.id.editText6)).withPulseOffset(extractShort(R.id.editText7))
+                        .withRepeatCount(extractByte(R.id.editText8)).commit();
+     */
+    
+    private  final short RISE_TIME= 500, HIGH_TIME= 500, FALL_TIME= 500, DURATION= 2000;
+    private static final byte REPEAT_COUNT= 10;
+    
+    private HashMap<ColorChannel, HashMap<Integer, Integer>> values= new HashMap<>();
+    private HashMap<Integer, SeekBar> seekBarRefs= new HashMap<>();
     private ColorChannel currentChannel= ColorChannel.GREEN;
 
-    private static final HashSet<Integer> editTextBoxes;
-    static {
-        editTextBoxes= new HashSet<>();
-        editTextBoxes.add(R.id.editText1);
-        editTextBoxes.add(R.id.editText2);
-        editTextBoxes.add(R.id.editText3);
-        editTextBoxes.add(R.id.editText4);
-        editTextBoxes.add(R.id.editText5);
-        editTextBoxes.add(R.id.editText6);
-        editTextBoxes.add(R.id.editText7);
-        editTextBoxes.add(R.id.editText8);
+    private static final HashSet<Integer> seekBars;
+    static {        
+        seekBars= new HashSet<>();
+        seekBars.add(R.id.seekBar1);
+        seekBars.add(R.id.seekBar2);
     }
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -120,33 +126,38 @@ public class LEDFragment extends ModuleFragment {
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         if (savedInstanceState != null) {
-            values= (HashMap<ColorChannel, HashMap<Integer, String>>) savedInstanceState.getSerializable("STATE_VALUES");
+            values= (HashMap<ColorChannel, HashMap<Integer, Integer>>) savedInstanceState.getSerializable("STATE_VALUES");
             currentChannel= (ColorChannel) savedInstanceState.getSerializable("STATE_COLOR");
         }
         
-        for(final Integer it: editTextBoxes) {
-            editTextRefs.put(it, (EditText) view.findViewById(it));
-            editTextRefs.get(it).setOnFocusChangeListener(new View.OnFocusChangeListener() {
+        
+        for(final Integer it: seekBars) {
+            seekBarRefs.put(it, (SeekBar) view.findViewById(it));
+            seekBarRefs.get(it).setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+
                 @Override
-                public void onFocusChange(View v, boolean hasFocus) {
-                    if (!hasFocus) {
-                        if (!values.containsKey(currentChannel)) {
-                            values.put(currentChannel, new HashMap<Integer, String>());
-                        }
-                        values.get(currentChannel).put(it, ((EditText) v).getEditableText().toString()); 
+                public void onProgressChanged(SeekBar seekBar, int progress,
+                        boolean fromUser) { 
+                    if (!values.containsKey(currentChannel)) {
+                        values.put(currentChannel, new HashMap<Integer, Integer>());
                     }
+                    values.get(currentChannel).put(it, progress);
                 }
+
+                @Override
+                public void onStartTrackingTouch(SeekBar seekBar) { }
+
+                @Override
+                public void onStopTrackingTouch(SeekBar seekBar) { }
             });
         }
-        
         ((Button) view.findViewById(R.id.button1)).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                ledController.setColorChannel(currentChannel).withHighIntensity(extractByte(R.id.editText1))
-                        .withLowIntensity(extractByte(R.id.editText2)).withRiseTime(extractShort(R.id.editText3))
-                        .withHighTime(extractShort(R.id.editText4)).withFallTime(extractShort(R.id.editText5))
-                        .withPulseDuration(extractShort(R.id.editText6)).withPulseOffset(extractShort(R.id.editText7))
-                        .withRepeatCount(extractByte(R.id.editText8)).commit();
+                ledController.setColorChannel(currentChannel).withHighIntensity((byte)seekBarRefs.get(R.id.seekBar1).getProgress())
+                        .withLowIntensity((byte)seekBarRefs.get(R.id.seekBar2).getProgress())
+                        .withRiseTime(RISE_TIME).withHighTime(HIGH_TIME).withFallTime(FALL_TIME)
+                        .withPulseDuration(DURATION).withRepeatCount(REPEAT_COUNT).commit();
             }
         });
         Spinner colorSpinner= (Spinner) view.findViewById(R.id.spinner1);
@@ -155,11 +166,11 @@ public class LEDFragment extends ModuleFragment {
             public void onItemSelected(AdapterView<?> parent, View view,
                     int position, long id) {
                 currentChannel= ColorChannel.values[position];
-                for(final Integer it: editTextBoxes) {
+                for(final Integer it: seekBars) {
                     if (values.get(currentChannel) != null && values.get(currentChannel).containsKey(it)) {
-                        editTextRefs.get(it).setText(values.get(currentChannel).get(it));
+                        seekBarRefs.get(it).setProgress(values.get(currentChannel).get(it));
                     } else {
-                        editTextRefs.get(it).setText("");
+                        seekBarRefs.get(it).setProgress(0);
                     }
                 }
             }
@@ -169,12 +180,5 @@ public class LEDFragment extends ModuleFragment {
         });
         colorSpinner.setAdapter(new ArrayAdapter<ColorChannel>(getActivity(), 
                 R.layout.command_row, R.id.command_name, ColorChannel.values));
-    }
-    
-    private byte extractByte(int id) {
-        return Byte.valueOf(editTextRefs.get(id).getEditableText().toString());
-    }
-    private short extractShort(int id) {
-        return Short.valueOf(editTextRefs.get(id).getEditableText().toString());
     }
 }

@@ -145,14 +145,6 @@ public class GPIOFragment extends ModuleFragment {
         });
         
         EditText pinText= ((EditText) view.findViewById(R.id.editText1));
-        pinText.setOnFocusChangeListener(new View.OnFocusChangeListener() {
-            @Override
-            public void onFocusChange(View v, boolean hasFocus) {
-                if (!hasFocus) {
-                    pin= Byte.valueOf(((EditText) v).getEditableText().toString());
-                }
-            }
-        });
         
         pinText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override

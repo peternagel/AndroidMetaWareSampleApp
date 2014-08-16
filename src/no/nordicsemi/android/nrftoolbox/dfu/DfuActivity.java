@@ -80,6 +80,15 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
+
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DefaultHttpClient;
 
 import com.mbientlab.metawear.app.ModuleActivity;
 import com.mbientlab.metawear.app.R;
@@ -104,6 +113,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -536,6 +546,50 @@ public class DfuActivity extends FragmentActivity implements LoaderCallbacks<Cur
 			}).show();
 		}
 	}
+	
+	private class CheckFilesTask extends AsyncTask<Uri, Integer, Long> {
+	    private Uri uri;
+        /* (non-Javadoc)
+         * @see android.os.AsyncTask#doInBackground(java.lang.Object[])
+         */
+        @Override
+        protected Long doInBackground(Uri... params) {
+            long len;
+            HttpResponse response = null;
+            uri= params[0];
+            try {
+                HttpClient httpclient= new DefaultHttpClient();
+                HttpGet httpget= new HttpGet(uri.toString());
+                response= httpclient.execute(httpget);
+                HttpEntity entity= response.getEntity();
+                len= entity.getContentLength();
+                mStatusOk= true;
+            } catch (IOException e) {
+                len= -1;
+            }
+            
+            return len;
+        }
+        
+        protected void onPostExecute(final Long result) {
+            mFileNameView.setText(uri.toString());
+            if (result != -1) {
+                mFileSizeView.setText(getString(R.string.dfu_file_size_text, result));
+                mFileStatusView.setText(R.string.dfu_file_status_ok);
+                mUploadButton.setEnabled(mSelectedDevice != null);
+            } else {
+                mFileSizeView.setText("N/A");
+                mFileStatusView.setText("File unavailable");
+                mUploadButton.setEnabled(false);
+            }
+        }
+	    
+	};
+	
+	public void onUpdateLatestClicked(final View view) {
+        mFileStreamUri= Uri.parse("http://releases.mbientlab.com/metawear/vanilla/latest/firmware.hex");
+        new CheckFilesTask().execute(mFileStreamUri);
+    }
 
 	/**
 	 * Callback of UPDATE/CANCEL button on DfuActivity

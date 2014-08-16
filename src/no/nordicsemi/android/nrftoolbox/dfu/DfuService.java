@@ -85,6 +85,12 @@ import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.util.UUID;
 
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DefaultHttpClient;
+
 import com.mbientlab.metawear.api.characteristic.MetaWear;
 import com.mbientlab.metawear.api.GATT.GATTService;
 import com.mbientlab.metawear.api.controller.Debug;
@@ -817,8 +823,10 @@ public class DfuService extends IntentService {
 	 * @throws FileNotFoundException
 	 */
 	private HexInputStream openInputStream(final Uri stream) throws FileNotFoundException, IOException {
-		final InputStream is = getContentResolver().openInputStream(stream);
-		return new HexInputStream(is);
+	    if (stream.getScheme().equals("http")) {
+	        return new HexInputStream(new HttpGet(stream.toString()));
+	    }
+	    return new HexInputStream(getContentResolver().openInputStream(stream));
 	}
 
 	/**
