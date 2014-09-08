@@ -30,17 +30,14 @@
  */
 package com.mbientlab.metawear.app;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map.Entry;
 
 import com.mbientlab.metawear.api.Module;
 import com.mbientlab.metawear.api.controller.LED;
 import com.mbientlab.metawear.api.controller.LED.ColorChannel;
 
 import android.content.ComponentName;
-import android.content.Context;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.view.LayoutInflater;
@@ -51,7 +48,6 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.SeekBar;
 import android.widget.Spinner;

@@ -85,11 +85,7 @@ import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.util.UUID;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
 
 import com.mbientlab.metawear.api.characteristic.MetaWear;
 import com.mbientlab.metawear.api.GATT.GATTService;

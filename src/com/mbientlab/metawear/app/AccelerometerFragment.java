@@ -31,10 +31,8 @@
 package com.mbientlab.metawear.app;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -65,26 +63,28 @@ import android.widget.Toast;
  *
  */
 public class AccelerometerFragment extends ModuleFragment {
+    private class AxisData {
+        /**
+         * @param tick
+         * @param data
+         */
+        public AxisData(long tick, short x, short y, short z) {
+            this.tick = tick;
+            this.data = new short[] {x, y, z};
+        }
+        public final long tick;
+        public final short[] data;
+    }
+    private long start;
     private Accelerometer accelController;
     private Accelerometer.Callbacks mCallback= new Accelerometer.Callbacks() {
         public void receivedDataValue(short x, short y, short z) {
-            final float xG= (float)x / 1024, yG= (float)y / 1024, zG= (float)z / 1024;
-            if (fos != null) {
-                try {
-                    fos.write(String.format("%1$.3f,%1$.3f,%1$.3f%n", xG, yG, zG).getBytes());
-                } catch (IOException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
+            if (polledData != null) {
+                polledData.add(new AxisData(System.currentTimeMillis() - start, x, y, z));
             }
-            if (xValues != null) {
-                xValues.add(xG);
-                yValues.add(yG);
-                zValues.add(zG);
-            }
+            
         }
     };
-    private HashMap<Integer, Boolean> values= new HashMap<>();
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -108,21 +108,24 @@ public class AccelerometerFragment extends ModuleFragment {
     @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putSerializable("STATE_VALUES", values);
+        outState.putBoolean("RECORDING", recording);
+        outState.putBoolean("PLOT_READY", plotReady);
     }
 
-    private boolean recording= false;
+    private boolean recording= false, plotReady= false;
     private XYPlot accelHistoryPlot;
     private SimpleXYSeries xAxis, yAxis, zAxis;
-    private ConcurrentLinkedQueue<Float> xValues, yValues, zValues;
+    private ConcurrentLinkedQueue<AxisData> polledData;
 
     private FileOutputStream fos= null;
-    private static final String FILENAME= "metawear_accelerometer_data_50hz_2g.csv";
-    @SuppressWarnings("unchecked")
+    private static final String FILENAME= "metawear_accelerometer_data_50hz_2g.csv", 
+            CSV_HEADER= String.format("time,xAxis,yAxis,zAxis%n");
+    
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         if (savedInstanceState != null) {
-            values= (HashMap<Integer, Boolean>) savedInstanceState.getSerializable("STATE_VALUES");
+            recording= savedInstanceState.getBoolean("RECORDING");
+            plotReady= savedInstanceState.getBoolean("PLOT_READY");
         }
         
         xAxis= new SimpleXYSeries("X Axis");
@@ -141,53 +144,73 @@ public class AccelerometerFragment extends ModuleFragment {
         accelHistoryPlot.setRangeLabel("Measured g's");
         accelHistoryPlot.getRangeLabelWidget().pack();
         
-        ((Button) view.findViewById(R.id.button1)).setOnClickListener(new OnClickListener() {
+        final Button recordButton= (Button) view.findViewById(R.id.button1);
+        recordButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (!recording) {
                     accelController.setComponentConfiguration(Component.DATA, 
                             new byte[] {0, 0, 0x20, 0, 0});
+                    
+                    polledData= new ConcurrentLinkedQueue<AxisData>();
+                    start= System.currentTimeMillis();
                     accelController.enableNotification(Component.DATA);
-                    xValues= new ConcurrentLinkedQueue<Float>();
-                    yValues= new ConcurrentLinkedQueue<Float>();
-                    zValues= new ConcurrentLinkedQueue<Float>();
-                    try {
-                        fos = AccelerometerFragment.this.getActivity().openFileOutput(FILENAME, Context.MODE_WORLD_READABLE);
-                    } catch (FileNotFoundException e) {
-                    //TODO Auto-generated catch block
-                        e.printStackTrace();
-                    }
                     recording= true;
-                    ((Button)v).setText(R.string.label_accelerometer_data_stop);
+                    recordButton.setText(R.string.label_accelerometer_data_stop);
                 } else {
                     accelController.disableNotification(Component.DATA);
-                    try {
-                        if (fos != null) {
-                            fos.close();
+                    plotReady= false;
+                    new Thread(new Runnable() {
+                        public void run() {
+                            try {
+                                ArrayList<Double> xVals= new ArrayList<>(), 
+                                        yVals= new ArrayList<>(), zVals= new ArrayList<>();
+                                        
+                                fos= AccelerometerFragment.this.getActivity().openFileOutput(FILENAME, Context.MODE_WORLD_READABLE);
+                                fos.write(CSV_HEADER.getBytes());
+                                for(AxisData it: polledData) {
+                                    double xG= it.data[0] / 1024.0, yG= it.data[1] / 1024.0, 
+                                            zG= it.data[2] / 1024.0;
+                                    
+                                    fos.write(String.format("%.3f,%.3f,%.3f,%.3f%n", it.tick / 1000.0, xG, yG, zG).getBytes());
+                                    
+                                    xVals.add(xG);
+                                    yVals.add(yG);
+                                    zVals.add(zG);
+                                }
+                                xAxis.setModel(xVals, ArrayFormat.Y_VALS_ONLY);
+                                yAxis.setModel(yVals, ArrayFormat.Y_VALS_ONLY);
+                                zAxis.setModel(zVals, ArrayFormat.Y_VALS_ONLY);
+                                
+                                fos.close();
+                                fos= null;
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                            plotReady= true;
                         }
-                        fos= null;
-                    } catch (FileNotFoundException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    } catch (IOException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    }
-                    ((Button)v).setText(R.string.label_accelerometer_data_record);
+                    }).start();
+                    recordButton.setText(R.string.label_accelerometer_data_record);
                     recording= false;
                 }
             }
         });
+        if (recording) {
+            recordButton.setText(R.string.label_accelerometer_data_stop);
+        } else {
+            recordButton.setText(R.string.label_accelerometer_data_record);
+        }
+        
         ((Button) view.findViewById(R.id.button2)).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (recording) {
                     Toast.makeText(AccelerometerFragment.this.getActivity(), "Stop data recording before plotting", 
                             Toast.LENGTH_SHORT).show();
+                } else if (!plotReady) {
+                    Toast.makeText(AccelerometerFragment.this.getActivity(), "Plot data not ready yet, please wait a few more seconds", 
+                            Toast.LENGTH_SHORT).show();
                 } else if (accelHistoryPlot != null) {
-                    xAxis.setModel(new ArrayList<Float>(xValues), ArrayFormat.Y_VALS_ONLY);
-                    yAxis.setModel(new ArrayList<Float>(yValues), ArrayFormat.Y_VALS_ONLY);
-                    zAxis.setModel(new ArrayList<Float>(zValues), ArrayFormat.Y_VALS_ONLY);
                     accelHistoryPlot.redraw();
                 }
             }
@@ -197,7 +220,6 @@ public class AccelerometerFragment extends ModuleFragment {
             public void onClick(View v) {
                 Intent intent = new Intent(Intent.ACTION_SEND);
                 intent.setType("text/plain");
-                intent.putExtra(Intent.EXTRA_EMAIL, new String[] {"eric@mbientlab.com"});
                 intent.putExtra(Intent.EXTRA_SUBJECT, "subject here");
                 intent.putExtra(Intent.EXTRA_TEXT, "body text");
                 File file = AccelerometerFragment.this.getActivity().getFileStreamPath(FILENAME);

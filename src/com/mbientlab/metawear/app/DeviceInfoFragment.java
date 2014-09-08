@@ -40,6 +40,7 @@ import com.mbientlab.metawear.api.MetaWearController.DeviceCallbacks;
 import com.mbientlab.metawear.api.GATT.GATTCharacteristic;
 import com.mbientlab.metawear.api.MetaWearController.ModuleCallbacks;
 import com.mbientlab.metawear.api.characteristic.DeviceInformation;
+import com.mbientlab.metawear.api.controller.Debug;
 import com.mbientlab.metawear.api.controller.MechanicalSwitch;
 import com.mbientlab.metawear.api.controller.Temperature;
 
@@ -79,6 +80,7 @@ public class DeviceInfoFragment extends ModuleFragment {
     
     private MechanicalSwitch switchController;
     private Temperature tempController;
+    private Debug debugController;
     private DeviceCallbacks dCallback= new MetaWearController.DeviceCallbacks() {
         @Override
         public void connected() {
@@ -161,6 +163,12 @@ public class DeviceInfoFragment extends ModuleFragment {
                 tempController.readTemperature();
             }
         });
+        ((Button) view.findViewById(R.id.button2)).setOnClickListener(new Button.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                debugController.resetDevice();
+            }
+        });
     }
     
     @Override
@@ -183,6 +191,7 @@ public class DeviceInfoFragment extends ModuleFragment {
         
         switchController= (MechanicalSwitch) this.mwController.getModuleController(Module.MECHANICAL_SWITCH);
         tempController= (Temperature)this.mwController.getModuleController(Module.TEMPERATURE);
+        debugController= (Debug)this.mwController.getModuleController(Module.DEBUG);
         this.mwController.addDeviceCallback(dCallback);
         this.mwController.addModuleCallback(mCallback).addModuleCallback(tempCallback);
         

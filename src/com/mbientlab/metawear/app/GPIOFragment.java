@@ -59,7 +59,7 @@ import android.widget.AdapterView.OnItemSelectedListener;
  *
  */
 public class GPIOFragment extends ModuleFragment {
-    private byte pin;
+    private byte gpioPin;
     private GPIO gpioController;
     private PullMode pullMode;
     
@@ -67,14 +67,14 @@ public class GPIOFragment extends ModuleFragment {
         @Override
         public void receivedAnalogInputAsAbsValue(short value) {
             if (isVisible()) {
-                ((TextView) getView().findViewById(R.id.textView6)).setText(String.format(Locale.US, "%d mV", value));
+                ((TextView) getView().findViewById(R.id.textView4)).setText(String.format(Locale.US, "%d mV", value));
             }
         }
 
         @Override
         public void receivedAnalogInputAsSupplyRatio(short value) {
             if (isVisible()) {
-                ((TextView) getView().findViewById(R.id.textView7)).setText(String.format(Locale.US, "%d", value));
+                ((TextView) getView().findViewById(R.id.textView5)).setText(String.format(Locale.US, "%d", value));
             }
         }
 
@@ -91,9 +91,11 @@ public class GPIOFragment extends ModuleFragment {
         return inflater.inflate(R.layout.fragment_gpio, container, false);
     }
     
+    private int digitalCmdIndex;
+    private String[] digitalCommands= {"Set Input", "Read Input", "Set Output", "Clear Output"};
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
-        Spinner pullModeSpinner= (Spinner) view.findViewById(R.id.spinner1);
+        Spinner pullModeSpinner= (Spinner) view.findViewById(R.id.spinner2);
         pullModeSpinner.setOnItemSelectedListener(new OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view,
@@ -107,40 +109,47 @@ public class GPIOFragment extends ModuleFragment {
         pullModeSpinner.setAdapter(new ArrayAdapter<PullMode>(getActivity(), 
                 R.layout.command_row, R.id.command_name, PullMode.values));
         
+        Spinner digitalSpinner= (Spinner) view.findViewById(R.id.spinner3);
+        digitalSpinner.setOnItemSelectedListener(new OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view,
+                    int position, long id) {
+                digitalCmdIndex= position;
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) { }
+        });
+        digitalSpinner.setAdapter(new ArrayAdapter<String>(getActivity(), 
+                R.layout.command_row, R.id.command_name, digitalCommands));
+        
+        
         ((Button) view.findViewById(R.id.button1)).setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
-                gpioController.setDigitalOutput(pin);
+                gpioController.readAnalogInput(gpioPin, AnalogMode.ABSOLUTE_VALUE);
+                gpioController.readAnalogInput(gpioPin, AnalogMode.SUPPLY_RATIO);
             }
         });
+        
         ((Button) view.findViewById(R.id.button2)).setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
-                gpioController.clearDigitalOutput(pin);
-            }
-        });
-        ((Button) view.findViewById(R.id.button3)).setOnClickListener(new Button.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                gpioController.setDigitalInput(pin, pullMode);
-            }
-        });
-        ((Button) view.findViewById(R.id.button4)).setOnClickListener(new Button.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                gpioController.readAnalogInput(pin, AnalogMode.ABSOLUTE_VALUE);
-            }
-        });
-        ((Button) view.findViewById(R.id.button5)).setOnClickListener(new Button.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                gpioController.readAnalogInput(pin, AnalogMode.SUPPLY_RATIO);
-            }
-        });
-        ((Button) view.findViewById(R.id.button6)).setOnClickListener(new Button.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                gpioController.readDigitalInput(pin);
+                switch(digitalCmdIndex) {
+                case 0:
+                    gpioController.setDigitalInput(gpioPin, pullMode);
+                    break;
+                case 1:
+                    gpioController.readDigitalInput(gpioPin);
+                    break;
+                case 2:
+                    gpioController.setDigitalOutput(gpioPin);
+                    break;
+                case 3:
+                    gpioController.clearDigitalOutput(gpioPin);
+                    break;
+                }
+                
             }
         });
         
@@ -153,7 +162,7 @@ public class GPIOFragment extends ModuleFragment {
                 switch (actionId) {
                 case EditorInfo.IME_ACTION_DONE:
                 case EditorInfo.IME_ACTION_NEXT:
-                    pin= Byte.valueOf(((EditText) v).getEditableText().toString());
+                    gpioPin= Byte.valueOf(((EditText) v).getEditableText().toString());
                     break;
                 }
                 return false;

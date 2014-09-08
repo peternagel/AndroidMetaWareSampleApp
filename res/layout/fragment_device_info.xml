@@ -29,119 +29,124 @@ DEFENSE THEREOF), OR OTHER SIMILAR COSTS.
 Should you have any questions regarding your right to use this Software, 
 contact MbientLab Inc, at www.mbientlab.com.
 -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/RelativeLayout1"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical" 
+    android:orientation="vertical"
     android:padding="16dp" >
-    
+
     <TableLayout
+        android:id="@+id/TableLayout1"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" >
-        
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="true" >
+
         <TableRow
             android:id="@+id/tableRow1"
             android:layout_width="fill_parent"
-            android:layout_height="wrap_content" 
-            android:orientation="horizontal"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:orientation="horizontal"
             android:weightSum="2" >
-            
+
             <TextView
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:text="@string/label_manufacturer" />
-                
+
             <TextView
                 android:id="@+id/manufacturer_name"
                 android:layout_width="0dp"
                 android:layout_weight="1" />
         </TableRow>
-        
+
         <TableRow
             android:id="@+id/tableRow2"
             android:layout_width="fill_parent"
-            android:layout_height="wrap_content" 
-            android:orientation="horizontal"
-            android:layout_weight="1">
-            
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal" >
+
             <TextView
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:text="@string/label_firmware_version" />
 
-            <TextView 
+            <TextView
                 android:id="@+id/firmware_version"
                 android:layout_width="0dp"
                 android:layout_weight="1" />
         </TableRow>
-        
+
         <TableRow
             android:id="@+id/tableRow3"
             android:layout_width="fill_parent"
-            android:layout_height="wrap_content" 
-            android:orientation="horizontal"
-            android:layout_weight="1">
-            
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal" >
+
             <TextView
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:text="@string/label_hardware_version" />
-            
-            <TextView 
+
+            <TextView
                 android:id="@+id/hardware_version"
                 android:layout_width="0dp"
                 android:layout_weight="1" />
         </TableRow>
-        
+
         <TableRow
             android:id="@+id/tableRow4"
             android:layout_width="fill_parent"
-            android:layout_height="wrap_content" 
-            android:orientation="horizontal"
-            android:layout_weight="1" >
-            
-            <TextView 
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal" >
+
+            <TextView
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:text="@string/label_serial_number" />
-            
-            <TextView 
+
+            <TextView
                 android:id="@+id/serial_number"
                 android:layout_width="0dp"
                 android:layout_weight="1" />
         </TableRow>
-        
+
         <TableRow
             android:id="@+id/tableRow5"
             android:layout_width="fill_parent"
-            android:layout_height="wrap_content" 
-            android:orientation="horizontal"
-            android:layout_weight="1" >
-            
-            <TextView 
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal" >
+
+            <TextView
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:text="@string/label_switch" />
-            
-            <TextView 
+
+            <TextView
                 android:id="@+id/mechanical_switch"
                 android:layout_width="0dp"
                 android:layout_weight="1" />
         </TableRow>
+
         <TableRow
             android:id="@+id/tableRow6"
             android:layout_width="fill_parent"
-            android:layout_height="wrap_content" 
-            android:orientation="horizontal"
-            android:layout_weight="1" >
-            
-            <TextView 
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal" >
+
+            <TextView
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:text="@string/label_temperature" />
-            
-            <TextView 
+
+            <TextView
                 android:id="@+id/temperature"
                 android:layout_width="0dp"
                 android:layout_weight="1" />
@@ -152,24 +157,26 @@ contact MbientLab Inc, at www.mbientlab.com.
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Refresh" />
-
         </TableRow>
     </TableLayout>
 
-    <LinearLayout
-        android:layout_width="match_parent"
+    <Button
+        android:id="@+id/button2"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center_horizontal" >
+        android:layout_centerHorizontal="true"
+        android:layout_centerVertical="true"
+        android:text="Reset" />
 
-        <ImageButton
-            android:background="@drawable/ic_feature_small_bg"
-            android:id="@+id/imageButton1"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:contentDescription="@string/label_dfu_button"
-            android:src="@drawable/ic_dfu_feature" />
+    <ImageButton
+        android:id="@+id/imageButton1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/button2"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/ic_feature_small_bg"
+        android:contentDescription="@string/label_dfu_button"
+        android:src="@drawable/ic_dfu_feature" />
 
-    </LinearLayout>
-
-</LinearLayout>
+</RelativeLayout>
