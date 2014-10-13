@@ -43,7 +43,8 @@ contact MbientLab Inc, at www.mbientlab.com.
     <string name="label_manufacturer">Manufacturer</string>
     <string name="label_firmware_version">Firmware Version</string>
     <string name="label_hardware_version">Hardware Version</string>
-    <string name="label_temperature">Temperature</string>
+    <string name="label_temperature"><b><i>Temperature</i></b></string>
+    <string name="label_battery_level"><b><i>Battery Level</i></b></string>
     <string name="label_accelerometer_data">Accelerometer Data</string>
     <string name="label_freefall_status">In Free Fall</string>
     <string name="label_led_red">Red</string>
@@ -129,4 +130,19 @@ contact MbientLab Inc, at www.mbientlab.com.
     <string name="label_led_color_channel">Color Channel</string>
     <string name="label_led_high_intensity">High Intensity</string>
     <string name="label_led_low_intensity">Low Intensity</string>
+    <string name="label_tap_detection">Tap Detection</string>
+    <string name="label_shake_detection">Shake Detection</string>
+    <string name="label_orientation_detection">Orientation Detection</string>
+    <string name="label_movement_detection">Movement Detection</string>
+    <string name="label_movement_axes">Movement Axes</string>
+    <string name="label_data_sampling">Data Sampling</string>
+    <string name="label_enable">Enable</string>
+    <string name="action_start">Start</string>
+    <string name="action_stop">Stop</string>
+    <string name="label_tap_type">Tap Type</string>
+    <string name="label_tap_axis">Tap Axis</string>
+    <string name="label_shake_axis">Shake Axis</string>
+    <string name="label_movement_type">Movement Type</string>
+    <string name="label_data_range">Data Range</string>
+    <string name="label_sampling_rate">Sampling Rate</string>
 </resources>

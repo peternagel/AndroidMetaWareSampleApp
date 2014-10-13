@@ -31,32 +31,45 @@
 package com.mbientlab.metawear.app;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Locale;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import com.androidplot.xy.LineAndPointFormatter;
-import com.androidplot.xy.SimpleXYSeries;
-import com.androidplot.xy.XYPlot;
-import com.androidplot.xy.SimpleXYSeries.ArrayFormat;
+import com.jjoe64.graphview.GraphViewDataInterface;
+import com.jjoe64.graphview.GraphView.GraphViewData;
 import com.mbientlab.metawear.api.Module;
 import com.mbientlab.metawear.api.controller.Accelerometer;
-import com.mbientlab.metawear.api.controller.Accelerometer.Component;
+import com.mbientlab.metawear.api.controller.Accelerometer.*;
+import com.mbientlab.metawear.api.controller.Accelerometer.SamplingConfig.FullScaleRange;
+import com.mbientlab.metawear.api.controller.Accelerometer.SamplingConfig.OutputDataRate;
+import com.mbientlab.metawear.api.util.BytesInterpreter;
+import com.mbientlab.metawear.app.popup.AccelerometerSettings;
+import com.mbientlab.metawear.app.popup.DataPlotFragment;
 
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.support.v4.content.FileProvider;
+import android.support.v4.app.FragmentManager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
+import android.view.animation.AlphaAnimation;
+import android.widget.CheckBox;
 import android.widget.Button;
-import android.widget.Toast;
+import android.widget.CompoundButton;
+import android.widget.CompoundButton.OnCheckedChangeListener;
+import android.widget.TextView;
+import android.widget.ToggleButton;
 
 /**
  * @author etsai
@@ -75,17 +88,77 @@ public class AccelerometerFragment extends ModuleFragment {
         public final long tick;
         public final short[] data;
     }
+    
+    private interface ProcessedAxisData {
+        public Collection<GraphViewDataInterface> xData();
+        public Collection<GraphViewDataInterface> yData();
+        public Collection<GraphViewDataInterface> zData();
+    }
+    
     private long start;
+    private ConcurrentLinkedQueue<AxisData> polledData;
+    private ProcessedAxisData processedData;
     private Accelerometer accelController;
+    
+    private static final AlphaAnimation fadeOut= new AlphaAnimation(1.0f , 0.0f);
+    static {
+        fadeOut.setDuration(2000);
+        fadeOut.setFillAfter(true);
+    }
+    
     private Accelerometer.Callbacks mCallback= new Accelerometer.Callbacks() {
+        
+        @Override 
+        public void movementDetected(MovementData moveData) {
+            TextView shakeText= (TextView) getView().findViewById(R.id.textView8);
+            if (ffMovement) {
+                shakeText.setText("Falling Skies");
+            } else {
+                shakeText.setText("Move your body");
+            }
+            shakeText.startAnimation(fadeOut);
+        }
+        
+        @Override 
+        public void orientationChanged(Orientation accelOrientation) {
+            TextView shakeText= (TextView) getView().findViewById(R.id.textView6);
+            shakeText.setText(String.format(Locale.US, "%s", accelOrientation.toString()));
+        }
+        
+        @Override
+        public void shakeDetected(MovementData moveData) {
+            TextView shakeText= (TextView) getView().findViewById(R.id.textView4);
+            shakeText.setText("Shake it like a polariod picture");
+            shakeText.startAnimation(fadeOut);
+        }
+        
+        @Override
+        public void doubleTapDetected(MovementData moveData) {
+            TextView tapText= (TextView) getView().findViewById(R.id.textView2);
+            tapText.setText("Double Beer Taps");
+            tapText.startAnimation(fadeOut);
+        }
+        
+        @Override
+        public void singleTapDetected(MovementData moveData) {
+            TextView tapText= (TextView) getView().findViewById(R.id.textView2);
+            tapText.setText("Beer Tap");
+            tapText.startAnimation(fadeOut);
+        }
+
+        @Override
         public void receivedDataValue(short x, short y, short z) {
             if (polledData != null) {
-                polledData.add(new AxisData(System.currentTimeMillis() - start, x, y, z));
+                if (start == 0) {
+                    polledData.add(new AxisData(0, x, y, z));
+                    start= System.currentTimeMillis();
+                } else {
+                    polledData.add(new AxisData(System.currentTimeMillis() - start, x, y, z));
+                }
             }
-            
         }
     };
-
+    
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState) {
@@ -108,134 +181,205 @@ public class AccelerometerFragment extends ModuleFragment {
     @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putBoolean("RECORDING", recording);
-        outState.putBoolean("PLOT_READY", plotReady);
     }
 
-    private boolean recording= false, plotReady= false;
-    private XYPlot accelHistoryPlot;
-    private SimpleXYSeries xAxis, yAxis, zAxis;
-    private ConcurrentLinkedQueue<AxisData> polledData;
-
-    private FileOutputStream fos= null;
-    private static final String FILENAME= "metawear_accelerometer_data_50hz_2g.csv", 
-            CSV_HEADER= String.format("time,xAxis,yAxis,zAxis%n");
+    private static final String CSV_HEADER= String.format("time,xAxis,yAxis,zAxis%n");
+    private String dataFilename;
+    
+    private enum CheckBoxName {
+        TAP, SHAKE, ORIENTATION, FREE_FALL, SAMPLING;
+    }
+    private HashMap<CheckBoxName, CheckBox> checkboxes;
     
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
-        if (savedInstanceState != null) {
-            recording= savedInstanceState.getBoolean("RECORDING");
-            plotReady= savedInstanceState.getBoolean("PLOT_READY");
-        }
+        checkboxes= new HashMap<>();
+        checkboxes.put(CheckBoxName.TAP, (CheckBox) view.findViewById(R.id.checkBox1));
+        checkboxes.put(CheckBoxName.SHAKE, (CheckBox) view.findViewById(R.id.checkBox2));
+        checkboxes.put(CheckBoxName.ORIENTATION, (CheckBox) view.findViewById(R.id.checkBox3));
+        checkboxes.put(CheckBoxName.FREE_FALL, (CheckBox) view.findViewById(R.id.checkBox4));
+        checkboxes.put(CheckBoxName.SAMPLING, (CheckBox) view.findViewById(R.id.checkBox5));
         
-        xAxis= new SimpleXYSeries("X Axis");
-        xAxis.useImplicitXVals();
-        yAxis= new SimpleXYSeries("Y Axis");
-        yAxis.useImplicitXVals();
-        zAxis= new SimpleXYSeries("Z Axis");
-        zAxis.useImplicitXVals();
-        
-        accelHistoryPlot= (XYPlot) view.findViewById(R.id.aprHistoryPlot);
-        accelHistoryPlot.addSeries(xAxis, new LineAndPointFormatter(Color.RED, Color.TRANSPARENT, Color.TRANSPARENT, null));
-        accelHistoryPlot.addSeries(yAxis, new LineAndPointFormatter(Color.GREEN, Color.TRANSPARENT, Color.TRANSPARENT, null));
-        accelHistoryPlot.addSeries(zAxis, new LineAndPointFormatter(Color.BLUE, Color.TRANSPARENT, Color.TRANSPARENT, null));
-        accelHistoryPlot.setTicksPerRangeLabel(3);
-        accelHistoryPlot.getGraphWidget().getDomainLabelPaint().setColor(Color.TRANSPARENT);
-        accelHistoryPlot.setRangeLabel("Measured g's");
-        accelHistoryPlot.getRangeLabelWidget().pack();
-        
-        final Button recordButton= (Button) view.findViewById(R.id.button1);
-        recordButton.setOnClickListener(new OnClickListener() {
+        ((ToggleButton) view.findViewById(R.id.toggleButton1)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
             @Override
-            public void onClick(View v) {
-                if (!recording) {
-                    accelController.setComponentConfiguration(Component.DATA, 
-                            new byte[] {0, 0, 0x20, 0, 0});
-                    
-                    polledData= new ConcurrentLinkedQueue<AxisData>();
-                    start= System.currentTimeMillis();
-                    accelController.enableNotification(Component.DATA);
-                    recording= true;
-                    recordButton.setText(R.string.label_accelerometer_data_stop);
-                } else {
-                    accelController.disableNotification(Component.DATA);
-                    plotReady= false;
-                    new Thread(new Runnable() {
-                        public void run() {
-                            try {
-                                ArrayList<Double> xVals= new ArrayList<>(), 
-                                        yVals= new ArrayList<>(), zVals= new ArrayList<>();
-                                        
-                                fos= AccelerometerFragment.this.getActivity().openFileOutput(FILENAME, Context.MODE_WORLD_READABLE);
-                                fos.write(CSV_HEADER.getBytes());
-                                for(AxisData it: polledData) {
-                                    double xG= it.data[0] / 1024.0, yG= it.data[1] / 1024.0, 
-                                            zG= it.data[2] / 1024.0;
-                                    
-                                    fos.write(String.format("%.3f,%.3f,%.3f,%.3f%n", it.tick / 1000.0, xG, yG, zG).getBytes());
-                                    
-                                    xVals.add(xG);
-                                    yVals.add(yG);
-                                    zVals.add(zG);
-                                }
-                                xAxis.setModel(xVals, ArrayFormat.Y_VALS_ONLY);
-                                yAxis.setModel(yVals, ArrayFormat.Y_VALS_ONLY);
-                                zAxis.setModel(zVals, ArrayFormat.Y_VALS_ONLY);
-                                
-                                fos.close();
-                                fos= null;
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                            plotReady= true;
+            public void onCheckedChanged(CompoundButton buttonView,
+                    boolean isChecked) {
+                if (isChecked) {
+                    if (checkboxes.get(CheckBoxName.TAP).isChecked()) {
+                        accelController.enableTapDetection(TapType.values()[tapType], 
+                                Axis.values()[tapAxis]);
+                    }
+                    if (checkboxes.get(CheckBoxName.SHAKE).isChecked()) {
+                        accelController.enableShakeDetection(Axis.values()[shakeAxis]);
+                    }
+                    if (checkboxes.get(CheckBoxName.ORIENTATION).isChecked()) {
+                        accelController.enableOrientationDetection();
+                    }
+                    if (checkboxes.get(CheckBoxName.FREE_FALL).isChecked()) {
+                        if (ffMovement) {
+                            accelController.enableFreeFallDetection();
+                        } else {
+                            accelController.enableMotionDetection(Axis.values());
                         }
-                    }).start();
-                    recordButton.setText(R.string.label_accelerometer_data_record);
-                    recording= false;
+                    }
+                    if (checkboxes.get(CheckBoxName.SAMPLING).isChecked()) {
+                        processedData= null;
+                        polledData= new ConcurrentLinkedQueue<>();
+                        samplingConfig= accelController.enableXYZSampling();
+                        samplingConfig.withFullScaleRange(FullScaleRange.values()[dataRange])
+                                .withOutputDataRate(OutputDataRate.values()[samplingRate]);
+                        start= 0;
+                    }
+                    for(CheckBox box: checkboxes.values()) {
+                        box.setEnabled(false);
+                    }
+                    accelController.startComponents();
+                } else {
+                    accelController.stopComponents();
+                    accelController.disableAllDetection(true);
+                    for(CheckBox box: checkboxes.values()) {
+                        box.setEnabled(true);
+                    }
                 }
+                
             }
         });
-        if (recording) {
-            recordButton.setText(R.string.label_accelerometer_data_stop);
-        } else {
-            recordButton.setText(R.string.label_accelerometer_data_record);
-        }
-        
         ((Button) view.findViewById(R.id.button2)).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (recording) {
-                    Toast.makeText(AccelerometerFragment.this.getActivity(), "Stop data recording before plotting", 
-                            Toast.LENGTH_SHORT).show();
-                } else if (!plotReady) {
-                    Toast.makeText(AccelerometerFragment.this.getActivity(), "Plot data not ready yet, please wait a few more seconds", 
-                            Toast.LENGTH_SHORT).show();
-                } else if (accelHistoryPlot != null) {
-                    accelHistoryPlot.redraw();
-                }
+                final FragmentManager fm = getActivity().getSupportFragmentManager();
+                final AccelerometerSettings dialog= new AccelerometerSettings();
+                
+                dialog.setConfigEditor(new Configuration(), new ConfigEditor());
+                dialog.show(fm, "resistance_graph_fragment");
+            }
+        });
+        ((Button) view.findViewById(R.id.button1)).setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                final FragmentManager fm = getActivity().getSupportFragmentManager();
+                final DataPlotFragment dialog= new DataPlotFragment();
+                
+                dataSampleToGs();
+                
+                dialog.addDataSeries("X Axis", processedData.xData());
+                dialog.addDataSeries("Y Axis", processedData.yData());
+                dialog.addDataSeries("Z Axis", processedData.zData());
+                dialog.show(fm, "resistance_graph_fragment");
             }
         });
         ((Button) view.findViewById(R.id.button3)).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(Intent.ACTION_SEND);
+                Intent intent= new Intent(Intent.ACTION_SEND);
                 intent.setType("text/plain");
-                intent.putExtra(Intent.EXTRA_SUBJECT, "subject here");
-                intent.putExtra(Intent.EXTRA_TEXT, "body text");
-                File file = AccelerometerFragment.this.getActivity().getFileStreamPath(FILENAME);
+                intent.putExtra(Intent.EXTRA_SUBJECT, "Logged Accelerometer Data");
                 
-                if (!file.exists()) {
-                    Toast.makeText(AccelerometerFragment.this.getActivity(), "Record data before emailing", 
-                            Toast.LENGTH_SHORT).show();
-                } else if (recording) {
-                    Toast.makeText(AccelerometerFragment.this.getActivity(), "Stop recording before emailing the data", 
-                            Toast.LENGTH_SHORT).show();
-                } else {
-                    Uri uri = Uri.fromFile(file);
-                    intent.putExtra(Intent.EXTRA_STREAM, uri);
-                    startActivity(Intent.createChooser(intent, "Send email..."));
-                }
+                File file= getActivity().getFileStreamPath(dataFilename);
+                Uri uri= FileProvider.getUriForFile(getActivity(), 
+                        "com.mbientlab.metawear.app.fileprovider", file);
+                intent.putExtra(Intent.EXTRA_STREAM, uri);
+                startActivity(Intent.createChooser(intent, "Send email..."));
             }
         });
     }
+    
+    private void dataSampleToGs() {
+        if (processedData != null) return;
+        
+        final Collection<GraphViewDataInterface> convertedX= new ArrayList<>(), 
+                convertedY= new ArrayList<>(), convertedZ= new ArrayList<>();
+        byte[] config= samplingConfig.getBytes();
+
+        dataFilename= String.format(Locale.US, "metawear_accelerometer_data-%s-%s.csv", 
+                FullScaleRange.values()[dataRange].toString(), 
+                OutputDataRate.values()[samplingRate].toString());
+        try {
+            FileOutputStream fos= getActivity().openFileOutput(dataFilename, Context.MODE_PRIVATE);
+            fos.write(CSV_HEADER.getBytes());
+            
+            double index= 0;
+            for(AxisData data: polledData) {
+                float xAccel= BytesInterpreter.bytesToGs(config, data.data[0]), 
+                        yAccel= BytesInterpreter.bytesToGs(config, data.data[1]),
+                        zAccel= BytesInterpreter.bytesToGs(config, data.data[2]);
+                
+                convertedX.add(new GraphViewData(index, xAccel));
+                convertedY.add(new GraphViewData(index, yAccel));
+                convertedZ.add(new GraphViewData(index, zAccel));
+                
+                fos.write(String.format(Locale.US, "%.3f,%.3f,%.3f,%.3f%n", data.tick / 1000.0, 
+                        xAccel, yAccel, zAccel).getBytes());
+                
+                index++;
+            }
+            
+            fos.close();
+        } catch (FileNotFoundException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        
+        
+        processedData= new ProcessedAxisData() {
+            @Override
+            public Collection<GraphViewDataInterface> xData() {
+                return convertedX;
+            }
+
+            @Override
+            public Collection<GraphViewDataInterface> yData() {
+                return convertedY;
+            }
+
+            @Override
+            public Collection<GraphViewDataInterface> zData() {
+                return convertedZ;
+            }
+        };
+    }
+    
+    public class ConfigEditor {
+        public ConfigEditor modifyTapType(int newIndex) {
+            AccelerometerFragment.this.tapType= newIndex;
+            return this;
+        }
+        public ConfigEditor modifyTapAxis(int newIndex) {
+            AccelerometerFragment.this.tapAxis= newIndex;
+            return this;
+        }
+        public ConfigEditor modifyShakeAxis(int newIndex) {
+            AccelerometerFragment.this.shakeAxis= newIndex;
+            return this;
+        }
+        public ConfigEditor modifyMovementType(int newIndex) {
+            AccelerometerFragment.this.ffMovement= newIndex == 0;
+            return this;
+        }
+        public ConfigEditor modifyDataRange(int newIndex) {
+            AccelerometerFragment.this.dataRange= newIndex;
+            return this;
+        }
+        public ConfigEditor modifySamplingRate(int newIndex) {
+            AccelerometerFragment.this.samplingRate= newIndex;
+            return this;
+        }
+    };
+    
+    public class Configuration {
+        public int tapTypePos() { return tapType; }
+        public int tapAxisPos() { return tapAxis; }
+        public int movementPos() { return ffMovement ? 0 : 1; }
+        public int shakeAxisPos() { return shakeAxis; }
+        public int fsrPos() { return dataRange; }
+        public int odrPos() { return samplingRate; }
+    }
+    
+    private int tapType= 0, tapAxis= 2, shakeAxis= 0, dataRange= 2, samplingRate= 3;
+    private boolean ffMovement= true;
+    
+    private SamplingConfig samplingConfig;
 }

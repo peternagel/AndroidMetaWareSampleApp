@@ -39,6 +39,7 @@ import com.mbientlab.metawear.api.Module;
 import com.mbientlab.metawear.api.MetaWearController.DeviceCallbacks;
 import com.mbientlab.metawear.api.GATT.GATTCharacteristic;
 import com.mbientlab.metawear.api.MetaWearController.ModuleCallbacks;
+import com.mbientlab.metawear.api.characteristic.Battery;
 import com.mbientlab.metawear.api.characteristic.DeviceInformation;
 import com.mbientlab.metawear.api.controller.Debug;
 import com.mbientlab.metawear.api.controller.MechanicalSwitch;
@@ -91,7 +92,11 @@ public class DeviceInfoFragment extends ModuleFragment {
         @Override
         public void receivedGATTCharacteristic(
                 GATTCharacteristic characteristic, byte[] data) {
-            values.put(characteristic, new String(data));
+            if (characteristic == Battery.BATTERY_LEVEL) {
+                values.put(characteristic, String.format(Locale.US, "%s", data[0]));
+            } else {
+                values.put(characteristic, new String(data));
+            }
             final Integer viewId= views.get(characteristic);
             if (viewId != null && isVisible()) {
                 ((TextView) getView().findViewById(viewId)).setText(values.get(characteristic));
@@ -129,6 +134,7 @@ public class DeviceInfoFragment extends ModuleFragment {
         views.put(DeviceInformation.SERIAL_NUMBER, R.id.serial_number);
         views.put(DeviceInformation.FIRMWARE_VERSION, R.id.firmware_version);
         views.put(DeviceInformation.HARDWARE_VERSION, R.id.hardware_version);
+        views.put(Battery.BATTERY_LEVEL, R.id.battery_level);
     }
 
     @Override
@@ -157,7 +163,7 @@ public class DeviceInfoFragment extends ModuleFragment {
             }
         });
         
-        ((Button) view.findViewById(R.id.button1)).setOnClickListener(new Button.OnClickListener() {
+        ((TextView) view.findViewById(R.id.temperature_action)).setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
                 tempController.readTemperature();
@@ -167,6 +173,12 @@ public class DeviceInfoFragment extends ModuleFragment {
             @Override
             public void onClick(View v) {
                 debugController.resetDevice();
+            }
+        });
+        ((TextView) view.findViewById(R.id.textView1)).setOnClickListener(new Button.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mwController.readBatteryLevel();
             }
         });
     }

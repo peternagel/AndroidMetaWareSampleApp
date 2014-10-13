@@ -16,4 +16,5 @@
     <color name="dividerColor">#BBBDC0</color>
     
     <color name="darkGray">#AAABAF</color>
+    <color name="action_text">#3D3AB0</color>
 </resources>
