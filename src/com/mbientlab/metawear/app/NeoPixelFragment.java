@@ -78,9 +78,12 @@ public class NeoPixelFragment extends ModuleFragment {
             @Override
             public void setPattern() {
                 byte nLEDs= Byte.parseByte(nLEDsText.getEditableText().toString()), currStrand= strand;
+                
+                neoPixelController.holdStrand(currStrand, (byte) 1);
                 for(byte i= 0; i < nLEDs; i++) {
                     neoPixelController.setPixel(currStrand, i, (byte)0, (byte)-1, (byte)0);
                 }
+                neoPixelController.holdStrand(currStrand, (byte) 0);
             }
         },
         new Preset() {
@@ -88,6 +91,8 @@ public class NeoPixelFragment extends ModuleFragment {
             public void setPattern() {
                 byte nLEDs= Byte.parseByte(nLEDsText.getEditableText().toString()), currStrand= strand;
                 double delta= 2 * Math.PI / nLEDs;
+                
+                neoPixelController.holdStrand(currStrand, (byte) 1);
                 for(byte i= 0; i < nLEDs; i++) {
                     double step= i * delta;
                     double rRatio= Math.cos(step),
@@ -97,6 +102,7 @@ public class NeoPixelFragment extends ModuleFragment {
                             (byte)((gRatio < -gRatio ? 0 : gRatio) * 255), 
                             (byte)((bRatio < -bRatio ? 0 : bRatio) * 255));
                 }
+                neoPixelController.holdStrand(currStrand, (byte) 0);
             }
         },
         new Preset() {
