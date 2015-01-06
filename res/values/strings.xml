@@ -45,6 +45,7 @@ contact MbientLab Inc, at www.mbientlab.com.
     <string name="label_hardware_version">Hardware Version</string>
     <string name="label_temperature"><b><i>Temperature</i></b></string>
     <string name="label_battery_level"><b><i>Battery Level</i></b></string>
+    <string name="label_remote_rssi"><b><i>Remote RSSI</i></b></string>
     <string name="label_accelerometer_data">Accelerometer Data</string>
     <string name="label_freefall_status">In Free Fall</string>
     <string name="label_led_red">Red</string>
@@ -52,6 +53,9 @@ contact MbientLab Inc, at www.mbientlab.com.
     <string name="label_led_blue">Blue</string>
     <string name="label_commands">Commands</string>
     <string name="title_module_detail">Module Detail</string>
+    
+    <string name="text_connected">Device Connected</string>
+    <string name="text_lost_connection">Connection Lost</string>
     
     <string name="mw_about_text">The MetaWear app provides a GUI for interacting with a MetaWear board and serves as an example on how to use the MetaWear API.</string>
 

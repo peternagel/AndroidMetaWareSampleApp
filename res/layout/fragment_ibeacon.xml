@@ -34,170 +34,179 @@ contact MbientLab Inc, at www.mbientlab.com.
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="16dp" >
-    
-    <TableLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" >
-        
-        <TableRow
-            android:id="@+id/row_ibeacon_uuid"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content" 
-            android:orientation="horizontal"
-            android:layout_weight="1"
-            android:weightSum="2" >
-            
-            <TextView
-                android:layout_width="0dp"
-                android:layout_weight="0.50"
-                android:text="@string/label_ibeacon_uuid" />
 
-            <EditText
-                android:id="@+id/editText1"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1.50"
-                android:ems="10"
-                android:enabled="false"
-                android:inputType="textPersonName" >
-
-            </EditText>
-        </TableRow>
-        
-        <TableRow
-            android:id="@+id/row_ibeacon_major"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content" 
-            android:orientation="horizontal"
-            android:layout_weight="1"
-            android:weightSum="2" >
-            
-            <TextView
-                android:layout_width="0dp"
-                android:layout_weight="1.50"
-                android:text="@string/label_ibeacon_major" />
-
-            <EditText
-                android:id="@+id/editText2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.5"
-                android:ems="10"
-                android:enabled="false"
-                android:inputType="number" />
-        </TableRow>
-        
-        <TableRow
-            android:id="@+id/row_ibeacon_minor"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content" 
-            android:orientation="horizontal"
-            android:layout_weight="1"
-            android:weightSum="2" >
-            
-            <TextView
-                android:layout_width="0dp"
-                android:layout_weight="1.50"
-                android:text="@string/label_ibeacon_minor" />
-
-            <EditText
-                android:id="@+id/editText3"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:ems="10"
-                android:layout_weight="0.5"
-                android:enabled="false"
-                android:inputType="number" />
-        </TableRow>
-        
-        <TableRow
-            android:id="@+id/row_ibeacon_rx"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content" 
-            android:orientation="horizontal"
-            android:layout_weight="1"
-            android:weightSum="2" >
-            
-            <TextView
-                android:layout_width="0dp"
-                android:layout_weight="1.5"
-                android:text="@string/label_ibeacon_rx" />
-
-            <EditText
-                android:id="@+id/editText4"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:ems="10"
-                android:layout_weight="0.5"
-                android:enabled="false"
-                android:inputType="numberSigned" />
-        </TableRow>
-        
-        <TableRow
-            android:id="@+id/row_ibeacon_tx"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content" 
-            android:orientation="horizontal"
-            android:layout_weight="1"
-            android:weightSum="2" >
-            
-            <TextView
-                android:layout_width="0dp"
-                android:layout_weight="1.5"
-                android:text="@string/label_ibeacon_tx" />
-
-            <EditText
-                android:id="@+id/editText5"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.5"
-                android:ems="10"
-                android:enabled="false"
-                android:inputType="numberSigned" />
-        </TableRow>
-        
-        <TableRow
-            android:id="@+id/row_ibeacon_period"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content" 
-            android:orientation="horizontal"
-            android:layout_weight="1"
-            android:weightSum="2" >
-            
-            <TextView
-                android:layout_width="0dp"
-                android:layout_weight="1.5"
-                android:text="@string/label_ibeacon_period" />
-
-            <EditText
-                android:id="@+id/editText6"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.5"
-                android:ems="10"
-                android:enabled="false"
-                android:inputType="number" />
-        </TableRow>
-    </TableLayout>
-
-    <LinearLayout
+    <ScrollView
+        android:id="@+id/scrollView1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" >
 
-        <Button
-            android:id="@+id/button1"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:enabled="false"
-            android:text="@string/label_ibeacon_enable" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical" >
 
-        <Button
-            android:id="@+id/button2"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:enabled="false"
-            android:text="@string/label_ibeacon_disable" />
+            <TableLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" >
 
-    </LinearLayout>
+                <TableRow
+                    android:id="@+id/row_ibeacon_uuid"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:weightSum="2" >
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_weight="1.25"
+                        android:text="@string/label_ibeacon_uuid" />
+
+                    <EditText
+                        android:id="@+id/editText1"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="0.75"
+                        android:ems="10"
+                        android:inputType="textPersonName" >
+
+                        <requestFocus />
+                    </EditText>
+                </TableRow>
+
+                <TableRow
+                    android:id="@+id/row_ibeacon_major"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:weightSum="2" >
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_weight="1.75"
+                        android:text="@string/label_ibeacon_major" />
+
+                    <EditText
+                        android:id="@+id/editText2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="0.25"
+                        android:ems="10"
+                        android:inputType="number" />
+                </TableRow>
+
+                <TableRow
+                    android:id="@+id/row_ibeacon_minor"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:weightSum="2" >
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_weight="1.75"
+                        android:text="@string/label_ibeacon_minor" />
+
+                    <EditText
+                        android:id="@+id/editText3"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="0.25"
+                        android:ems="10"
+                        android:inputType="number" />
+                </TableRow>
+
+                <TableRow
+                    android:id="@+id/row_ibeacon_rx"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:weightSum="2" >
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_weight="1.75"
+                        android:text="@string/label_ibeacon_rx" />
+
+                    <EditText
+                        android:id="@+id/editText4"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="0.25"
+                        android:ems="10"
+                        android:inputType="numberSigned" />
+                </TableRow>
+
+                <TableRow
+                    android:id="@+id/row_ibeacon_tx"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:weightSum="2" >
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_weight="1.75"
+                        android:text="@string/label_ibeacon_tx" />
+
+                    <EditText
+                        android:id="@+id/editText5"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="0.25"
+                        android:ems="10"
+                        android:inputType="numberSigned" />
+                </TableRow>
+
+                <TableRow
+                    android:id="@+id/row_ibeacon_period"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:weightSum="2" >
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_weight="1.75"
+                        android:text="@string/label_ibeacon_period" />
+
+                    <EditText
+                        android:id="@+id/editText6"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="0.25"
+                        android:ems="10"
+                        android:inputType="number" />
+                </TableRow>
+            </TableLayout>
+
+            <LinearLayout
+                android:id="@+id/LinearLayout1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="horizontal" >
+
+                <Button
+                    android:id="@+id/button1"
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_ibeacon_enable" />
+
+                <Button
+                    android:id="@+id/button2"
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_ibeacon_disable" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
 
 </LinearLayout>

@@ -14,7 +14,7 @@
  * Software and/or its documentation for any purpose.
  *
  * YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE 
- * PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
  * INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE, 
  * NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL 
  * MBIENTLAB OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT, NEGLIGENCE, 
@@ -40,15 +40,15 @@ import com.mbientlab.metawear.api.Module;
 import com.mbientlab.metawear.api.MetaWearController.DeviceCallbacks;
 import com.mbientlab.metawear.api.controller.IBeacon;
 
-import android.content.ComponentName;
 import android.os.Bundle;
-import android.os.IBinder;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
 
 /**
  * @author etsai
@@ -115,18 +115,19 @@ public class IBeaconFragment extends ModuleFragment {
     private DeviceCallbacks dCallback= new MetaWearController.DeviceCallbacks() {
         @Override
         public void connected() {
-            if (isVisible()) {
-                for(Integer it: editTextBoxes) {
-                    EditText view= (EditText) getView().findViewById(it);
-                    view.setEnabled(true);
-                }
-            
-                ((Button) getView().findViewById(R.id.button1)).setEnabled(true);
-                ((Button) getView().findViewById(R.id.button2)).setEnabled(true);
-            }
-            
             for(IBeacon.Register it: IBeacon.Register.values()) {
                 ibeaconController.readSetting(it);
+            }
+        }
+        
+        @Override
+        public void disconnected() {
+            final View view= getView();
+            for(Integer it: editTextBoxes) {
+                if (view != null) {
+                    ((EditText) view.findViewById(it)).setText("");
+                }
+                values.put(it, "");
             }
         }
     };
@@ -146,7 +147,6 @@ public class IBeaconFragment extends ModuleFragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState) {
-        setHasOptionsMenu(true);
         return inflater.inflate(R.layout.fragment_ibeacon, container, false);
     }
     
@@ -156,21 +156,23 @@ public class IBeaconFragment extends ModuleFragment {
         if (savedInstanceState != null) {
             values= (HashMap<Integer, String>) savedInstanceState.getSerializable("STATE_VALUES");
         }
-        if (mwController != null && mwController.isConnected()) {
-            for(Integer it: editTextBoxes) {
-                ((EditText) view.findViewById(it)).setEnabled(true);
-            }
-        
-            ((Button) view.findViewById(R.id.button1)).setEnabled(true);
-            ((Button) view.findViewById(R.id.button2)).setEnabled(true);
-        }
         for(Entry<Integer, String> it: values.entrySet()) {
             ((EditText) view.findViewById(it.getKey())).setText(it.getValue());
         }
         ((Button) view.findViewById(R.id.button1)).setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
-                ibeaconController.enableIBeacon();
+                try {
+                    ibeaconController.setUUID(UUID.fromString(values.get(R.id.editText1)))
+                            .setMajor(Short.parseShort(values.get(R.id.editText2)))
+                            .setMinor(Short.parseShort(values.get(R.id.editText3)))
+                            .setCalibratedRXPower(Byte.parseByte(values.get(R.id.editText4)))
+                            .setTXPower(Byte.parseByte(values.get(R.id.editText5)))
+                            .setAdvertisingPeriod(Short.parseShort(values.get(R.id.editText6)))
+                            .enableIBeacon();
+                } catch (Exception ex) {
+                    Toast.makeText(getActivity(), ex.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+                }
             }
         });
         ((Button) view.findViewById(R.id.button2)).setOnClickListener(new Button.OnClickListener() {
@@ -180,78 +182,32 @@ public class IBeaconFragment extends ModuleFragment {
             }
         });
         
-        ((EditText) view.findViewById(R.id.editText1)).setOnFocusChangeListener(new View.OnFocusChangeListener() {
-            @Override
-            public void onFocusChange(View v, boolean hasFocus) {
-                if (!hasFocus) {
-                    values.put(R.id.editText1, ((EditText) v).getEditableText().toString());
-                    ibeaconController.setUUID(UUID.fromString(values.get(R.id.editText1)));
+        int[] editTextIds= {R.id.editText1, R.id.editText2, R.id.editText3, R.id.editText4, R.id.editText5, R.id.editText6};
+        for(final int id: editTextIds) {
+            ((EditText) view.findViewById(id)).addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start,
+                        int count, int after) { }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start,
+                        int before, int count) {
+                    values.put(id, s.toString());
                 }
 
-            }
-        });
-        ((EditText) view.findViewById(R.id.editText2)).setOnFocusChangeListener(new View.OnFocusChangeListener() {
-            @Override
-            public void onFocusChange(View v, boolean hasFocus) {
-                if (!hasFocus) {
-                    values.put(R.id.editText2, ((EditText) v).getEditableText().toString());
-                    ibeaconController.setMajor(Short.parseShort(values.get(R.id.editText2)));
-                }
-            }
-        });
-        ((EditText) view.findViewById(R.id.editText3)).setOnFocusChangeListener(new View.OnFocusChangeListener() {
-            @Override
-            public void onFocusChange(View v, boolean hasFocus) {
-                if (!hasFocus) {
-                    values.put(R.id.editText3, ((EditText) v).getEditableText().toString());
-                    ibeaconController.setMinor(Short.parseShort(values.get(R.id.editText3)));
-                }
-            }
-        });
-        ((EditText) view.findViewById(R.id.editText4)).setOnFocusChangeListener(new View.OnFocusChangeListener() {
-            @Override
-            public void onFocusChange(View v, boolean hasFocus) {
-                if (!hasFocus) {
-                    values.put(R.id.editText4, ((EditText) v).getEditableText().toString());
-                    ibeaconController.setCalibratedRXPower(Byte.parseByte(values.get(R.id.editText4)));
-                }
-            }
-        });
-        ((EditText) view.findViewById(R.id.editText5)).setOnFocusChangeListener(new View.OnFocusChangeListener() {
-            @Override
-            public void onFocusChange(View v, boolean hasFocus) {
-                if (!hasFocus) {
-                    values.put(R.id.editText5, ((EditText) v).getEditableText().toString());
-                    ibeaconController.setTXPower(Byte.parseByte(values.get(R.id.editText5)));
-                }
-            }
-        });
-        ((EditText) view.findViewById(R.id.editText6)).setOnFocusChangeListener(new View.OnFocusChangeListener() {
-            @Override
-            public void onFocusChange(View v, boolean hasFocus) {
-                if (!hasFocus) {
-                    values.put(R.id.editText6, ((EditText) v).getEditableText().toString());
-                    ibeaconController.setAdvertisingPeriod(Short.parseShort(values.get(R.id.editText6)));
-                }
-            }
-        });
+                @Override
+                public void afterTextChanged(Editable s) { }
+            });
+        }
     }
     
     @Override
-    public void onServiceConnected(ComponentName name, IBinder service) {
-        super.onServiceConnected(name, service);
-        ibeaconController= (IBeacon) this.mwController.getModuleController(Module.IBEACON);
-        this.mwController.addModuleCallback(mCallbacks);
-        this.mwController.addDeviceCallback(dCallback);
+    public void controllerReady(MetaWearController mwController) {
+        ibeaconController= (IBeacon) mwController.getModuleController(Module.IBEACON);
+        mwController.addModuleCallback(mCallbacks);
+        mwController.addDeviceCallback(dCallback);
         
-        if (this.mwController.isConnected()) {
-            for(Integer it: editTextBoxes) {
-                EditText view= (EditText) getView().findViewById(it);
-                view.setEnabled(true);
-            }
-            ((Button) getView().findViewById(R.id.button1)).setEnabled(true);
-            ((Button) getView().findViewById(R.id.button2)).setEnabled(true);
-            
+        if (mwController.isConnected()) {
             for(IBeacon.Register it: IBeacon.Register.values()) {
                 ibeaconController.readSetting(it);
             }
@@ -260,8 +216,12 @@ public class IBeaconFragment extends ModuleFragment {
     
     @Override
     public void onDestroy() {
-        mwController.removeModuleCallback(mCallbacks);
-        mwController.removeDeviceCallback(dCallback);
+        final MetaWearController mwController= mwMnger.getCurrentController();
+        if (mwMnger.hasController()) {
+            mwController.removeModuleCallback(mCallbacks);
+            mwController.removeDeviceCallback(dCallback);
+        }
+        
         super.onDestroy();
     }
     
@@ -271,23 +231,6 @@ public class IBeaconFragment extends ModuleFragment {
         for(Entry<Integer, String> it: values.entrySet()) {
             ((EditText) getView().findViewById(it.getKey())).setText(it.getValue());
         }
-    }
-    
-    @Override
-    public boolean onOptionsItemSelected (MenuItem item) {
-        switch (item.getItemId()) {
-        case R.id.ble_disconnect:
-            for(Integer it: editTextBoxes) {
-                EditText view= (EditText) getView().findViewById(it);
-                view.setText("");
-                view.setEnabled(false);
-            }
-            ((Button) getView().findViewById(R.id.button1)).setEnabled(false);
-            ((Button) getView().findViewById(R.id.button2)).setEnabled(false);
-            break;
-        }
-        
-        return super.onOptionsItemSelected(item);
     }
     
     @Override

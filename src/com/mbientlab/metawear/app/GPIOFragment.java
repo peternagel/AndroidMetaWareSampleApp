@@ -14,7 +14,7 @@
  * Software and/or its documentation for any purpose.
  *
  * YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE 
- * PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
  * INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE, 
  * NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL 
  * MBIENTLAB OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT, NEGLIGENCE, 
@@ -32,15 +32,14 @@ package com.mbientlab.metawear.app;
 
 import java.util.Locale;
 
+import com.mbientlab.metawear.api.MetaWearController;
 import com.mbientlab.metawear.api.MetaWearController.ModuleCallbacks;
 import com.mbientlab.metawear.api.Module;
 import com.mbientlab.metawear.api.controller.GPIO;
 import com.mbientlab.metawear.api.controller.GPIO.AnalogMode;
 import com.mbientlab.metawear.api.controller.GPIO.PullMode;
 
-import android.content.ComponentName;
 import android.os.Bundle;
-import android.os.IBinder;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -171,15 +170,19 @@ public class GPIOFragment extends ModuleFragment {
     }
     
     @Override
-    public void onServiceConnected(ComponentName name, IBinder service) {
-        super.onServiceConnected(name, service);
-        gpioController= (GPIO) this.mwController.getModuleController(Module.GPIO);
-        this.mwController.addModuleCallback(mCallbacks);
+    public void controllerReady(MetaWearController mwController) {
+        gpioController= (GPIO) mwController.getModuleController(Module.GPIO);
+        mwController.addModuleCallback(mCallbacks);
     }
+    
     
     @Override
     public void onDestroy() {
-        mwController.removeModuleCallback(mCallbacks);
+        final MetaWearController mwController= mwMnger.getCurrentController();
+        if (mwMnger.hasController()) {
+            mwController.removeModuleCallback(mCallbacks);
+        }
+        
         super.onDestroy();
     }
 }

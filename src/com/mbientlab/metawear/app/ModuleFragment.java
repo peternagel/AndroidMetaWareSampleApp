@@ -14,7 +14,7 @@
  * Software and/or its documentation for any purpose.
  *
  * YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE 
- * PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * PROVIDED ï¿½AS ISï¿½ WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
  * INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE, 
  * NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL 
  * MBIENTLAB OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT, NEGLIGENCE, 
@@ -30,55 +30,35 @@
  */
 package com.mbientlab.metawear.app;
 
-import com.mbientlab.metawear.api.MetaWearBleService;
 import com.mbientlab.metawear.api.MetaWearController;
 
 import android.app.Activity;
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.Intent;
-import android.content.ServiceConnection;
-import android.os.IBinder;
 import android.support.v4.app.Fragment;
 
 /**
  * @author etsai
  *
  */
-public abstract class ModuleFragment extends Fragment implements ServiceConnection {
-    protected MetaWearController mwController;
-    private MetaWearBleService mwService;
-
+public abstract class ModuleFragment extends Fragment {
+    protected MetaWearManager mwMnger;
+    
     public void clearBluetoothDevice() { }
+    
+    public interface MetaWearManager {
+        public MetaWearController getCurrentController();
+        public boolean hasController();
+    }
     
     @Override
     public void onAttach(Activity activity) {
         super.onAttach(activity);
-        activity.getApplicationContext().bindService(new Intent(activity,MetaWearBleService.class), 
-                this, Context.BIND_AUTO_CREATE);
-    }
-    
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        getActivity().getApplicationContext().unbindService(this);
-    }
-    
-    /* (non-Javadoc)
-     * @see android.content.ServiceConnection#onServiceConnected(android.content.ComponentName, android.os.IBinder)
-     */
-    @Override
-    public void onServiceConnected(ComponentName name, IBinder service) {
-        mwService= ((MetaWearBleService.LocalBinder) service).getService();
-        mwController= mwService.getMetaWearController();
-    }
-
-    /* (non-Javadoc)
-     * @see android.content.ServiceConnection#onServiceDisconnected(android.content.ComponentName)
-     */
-    @Override
-    public void onServiceDisconnected(ComponentName name) {
-        // TODO Auto-generated method stub
         
+        if (!(activity instanceof MetaWearManager)) {
+            throw new IllegalStateException(
+                    "Activity must implement fragment's callbacks.");
+        }
+        mwMnger= (MetaWearManager) activity;
     }
+    
+    public abstract void controllerReady(MetaWearController mwController);
 }

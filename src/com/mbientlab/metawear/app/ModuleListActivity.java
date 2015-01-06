@@ -14,7 +14,7 @@
  * Software and/or its documentation for any purpose.
  *
  * YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE 
- * PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * PROVIDED ï¿½AS ISï¿½ WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
  * INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE, 
  * NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL 
  * MBIENTLAB OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT, NEGLIGENCE, 
@@ -65,6 +65,10 @@ public class ModuleListActivity extends ModuleActivity implements ModuleListFrag
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_module_list);
 
+        if (getIntent().hasExtra(EXTRA_BLE_DEVICE)) {
+            device= getIntent().getParcelableExtra(EXTRA_BLE_DEVICE);
+        }
+        
         if (findViewById(R.id.module_detail_container) != null) {
             // The detail container view will be present only in the
             // large-screen layouts (res/values-large and
@@ -106,13 +110,17 @@ public class ModuleListActivity extends ModuleActivity implements ModuleListFrag
                 }
                 transaction.add(R.id.module_detail_container, moduleFragment, id);
             }
+            if (mwController != null) {
+                moduleFragment.controllerReady(mwController);
+            }
             transaction.attach(moduleFragment).commit();
         } else {
             // In single-pane mode, simply start the detail activity
             // for the selected item ID.
             Intent detailIntent = new Intent(this, ModuleDetailActivity.class);
             detailIntent.putExtra(ARG_ITEM_ID, id);
-            startActivity(detailIntent);
+            detailIntent.putExtra(EXTRA_BLE_DEVICE, device);
+            startActivityForResult(detailIntent, START_MODULE_DETAIL);
         }
     }
 }

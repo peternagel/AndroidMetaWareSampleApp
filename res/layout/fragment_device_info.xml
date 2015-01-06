@@ -175,6 +175,28 @@ contact MbientLab Inc, at www.mbientlab.com.
                 android:layout_weight="1" />
 
         </TableRow>
+        
+        <TableRow
+            android:id="@+id/tableRow8"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal" >
+
+            <TextView
+                android:id="@+id/textView2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@color/action_text"
+                android:text="@string/label_remote_rssi" />
+
+            <TextView
+                android:id="@+id/remote_rssi"
+                android:layout_width="0dp"
+                android:layout_weight="1" />
+
+        </TableRow>
     </TableLayout>
 
     <Button

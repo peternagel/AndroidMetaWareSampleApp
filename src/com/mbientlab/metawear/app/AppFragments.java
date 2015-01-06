@@ -49,7 +49,9 @@ public class AppFragments {
         fragments.put("Haptic", HapticFragment.class);
         fragments.put("GPIO", GPIOFragment.class);
         fragments.put("Neo Pixel", NeoPixelFragment.class);
-        
+        fragments.put("Temperature", TemperatureFragment.class);
+        fragments.put("Event", EventFragment.class);
+
         items= fragments.keySet().toArray(new String[fragments.size()]);
     }
     

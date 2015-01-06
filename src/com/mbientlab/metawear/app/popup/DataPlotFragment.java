@@ -55,7 +55,7 @@ import android.widget.LinearLayout;
  */
 public class DataPlotFragment extends DialogFragment {
     private final int[] chartColors= new int[] { Color.rgb(255, 0, 0), 
-            Color.rgb(0, 255, 0), Color.rgb(0, 0, 255)};
+            Color.rgb(0, 255, 0), Color.rgb(0, 0, 255), Color.rgb(0, 0, 0)};
     private final HashMap<String, GraphViewDataInterface[]> dataSeries= new HashMap<>();
     
     @Override

@@ -14,7 +14,7 @@
  * Software and/or its documentation for any purpose.
  *
  * YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE 
- * PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
  * INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE, 
  * NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL 
  * MBIENTLAB OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT, NEGLIGENCE, 
@@ -33,13 +33,12 @@ package com.mbientlab.metawear.app;
 import java.util.HashMap;
 import java.util.HashSet;
 
+import com.mbientlab.metawear.api.MetaWearController;
 import com.mbientlab.metawear.api.Module;
 import com.mbientlab.metawear.api.controller.LED;
 import com.mbientlab.metawear.api.controller.LED.ColorChannel;
 
-import android.content.ComponentName;
 import android.os.Bundle;
-import android.os.IBinder;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -58,14 +57,6 @@ import android.widget.Spinner;
  */
 public class LEDFragment extends ModuleFragment {
     private LED ledController;
-    
-    /*
-     * .withLowIntensity((byte)seekBarRefs.get(R.id.seekBar2).getProgress())
-                        .withRiseTime(extractShort(R.id.editText3))
-                        .withHighTime(extractShort(R.id.editText4)).withFallTime(extractShort(R.id.editText5))
-                        .withPulseDuration(extractShort(R.id.editText6)).withPulseOffset(extractShort(R.id.editText7))
-                        .withRepeatCount(extractByte(R.id.editText8)).commit();
-     */
     
     private  final short RISE_TIME= 500, HIGH_TIME= 500, FALL_TIME= 500, DURATION= 2000;
     private static final byte REPEAT_COUNT= 10;
@@ -108,10 +99,10 @@ public class LEDFragment extends ModuleFragment {
     }
     
     @Override
-    public void onServiceConnected(ComponentName name, IBinder service) {
-        super.onServiceConnected(name, service);
-        ledController= (LED)this.mwController.getModuleController(Module.LED);
+    public void controllerReady(MetaWearController mwController) {
+        ledController= (LED) mwController.getModuleController(Module.LED);
     }
+    
     @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);

@@ -14,7 +14,7 @@
  * Software and/or its documentation for any purpose.
  *
  * YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE 
- * PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * PROVIDED ï¿½AS ISï¿½ WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
  * INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE, 
  * NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL 
  * MBIENTLAB OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT, NEGLIGENCE, 
@@ -68,6 +68,11 @@ public class ModuleDetailActivity extends ModuleActivity {
             // Create the detail fragment and add it to the activity
             // using a fragment transaction.
             String id= getIntent().getStringExtra(ARG_ITEM_ID);
+            
+            if (getIntent().hasExtra(EXTRA_BLE_DEVICE)) {
+                device= getIntent().getParcelableExtra(EXTRA_BLE_DEVICE);
+            }
+            
             try {
                 moduleFragment= AppFragments.getFragmentClass(id).getConstructor().newInstance();
             } catch (InstantiationException | IllegalAccessException
@@ -94,8 +99,11 @@ public class ModuleDetailActivity extends ModuleActivity {
             //
             // http://developer.android.com/design/patterns/navigation.html#up-vs-back
             //
-            NavUtils.navigateUpTo(this, new Intent(this,
-                    ModuleListActivity.class));
+            
+            Intent result= new Intent(this, ModuleListActivity.class);
+            result.putExtra(EXTRA_BLE_DEVICE, device);
+            NavUtils.navigateUpTo(this, result);
+            
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -105,6 +113,11 @@ public class ModuleDetailActivity extends ModuleActivity {
     public void onBackPressed() {
         fragStates.put(getIntent().getStringExtra(ARG_ITEM_ID), 
                 getSupportFragmentManager().saveFragmentInstanceState(moduleFragment));
+        
+        Intent result = new Intent();
+        result.putExtra(EXTRA_BLE_DEVICE, device);
+        setResult(RESULT_OK, result);
+        
         super.onBackPressed();
     }
 }

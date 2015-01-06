@@ -14,7 +14,7 @@
  * Software and/or its documentation for any purpose.
  *
  * YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE 
- * PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
  * INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE, 
  * NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL 
  * MBIENTLAB OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT, NEGLIGENCE, 
@@ -54,19 +54,21 @@ import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 /**
  * @author etsai
  *
  */
 public class ModuleActivity extends FragmentActivity implements DeviceInfoFragment.Callbacks, 
-        ScannerFragment.OnDeviceSelectedListener, ServiceConnection {
+        ScannerFragment.OnDeviceSelectedListener, ModuleFragment.MetaWearManager, ServiceConnection {
     public static final String EXTRA_BLE_DEVICE= 
             "com.mbientlab.metawear.app.ModuleActivity.EXTRA_BLE_DEVICE";
     protected static final String ARG_ITEM_ID = "item_id";
 
     private static final int DFU = 0;
     private static final int REQUEST_ENABLE_BT= 1;
+    protected static final int START_MODULE_DETAIL= 2;
     protected static BluetoothDevice device;
     
     @Override
@@ -101,10 +103,11 @@ public class ModuleActivity extends FragmentActivity implements DeviceInfoFragme
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         switch(requestCode) {
+        case START_MODULE_DETAIL:
         case DFU:
             device= data.getParcelableExtra(EXTRA_BLE_DEVICE);
             if (device != null) {
-                mwService.connect(device);
+                mwController= mwService.getMetaWearController(device);
             }
             break;
         case REQUEST_ENABLE_BT:
@@ -121,8 +124,33 @@ public class ModuleActivity extends FragmentActivity implements DeviceInfoFragme
      */
     @Override
     public void onDeviceSelected(BluetoothDevice device, String name) {
+        if (mwController != null && mwController.isConnected()) {
+            mwController.close(true);
+            mwController= null;
+        }
+        
         ModuleActivity.device= device;
-        mwService.connect(ModuleActivity.device);
+        
+        mwController= mwService.getMetaWearController(device);
+        mwController.addDeviceCallback(new MetaWearController.DeviceCallbacks() {
+            @Override
+            public void connected() {
+                Toast.makeText(ModuleActivity.this, R.string.text_connected, Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void disconnected() {
+                Toast.makeText(ModuleActivity.this, R.string.text_lost_connection, Toast.LENGTH_SHORT).show();
+                if (ModuleActivity.device != null && mwController != null) {
+                    mwController.reconnect(false);
+                }
+            }
+        });
+        
+        if (moduleFragment != null) {
+            moduleFragment.controllerReady(mwController);
+        }
+        mwController.connect();
     }
 
     /* (non-Javadoc)
@@ -140,21 +168,12 @@ public class ModuleActivity extends FragmentActivity implements DeviceInfoFragme
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
         mwService= ((MetaWearBleService.LocalBinder) service).getService();
-        mwController= mwService.getMetaWearController();
-        mwController.addDeviceCallback(new MetaWearController.DeviceCallbacks() {
-            @Override
-            public void connected() {
-                invalidateOptionsMenu();
+        if (device != null) {
+            mwController= mwService.getMetaWearController(device);
+            if (moduleFragment != null) {
+                moduleFragment.controllerReady(mwController);
             }
-
-            @Override
-            public void disconnected() {
-                invalidateOptionsMenu();
-                if (device != null) {
-                    mwService.reconnect();
-                }
-            }
-        });
+        }
     }
 
     /* (non-Javadoc)
@@ -174,8 +193,8 @@ public class ModuleActivity extends FragmentActivity implements DeviceInfoFragme
     
     
     private final BroadcastReceiver metaWearUpdateReceiver= MetaWearBleService.getMetaWearBroadcastReceiver();
-    private MetaWearBleService mwService;
-    private MetaWearController mwController;
+    protected MetaWearBleService mwService;
+    protected MetaWearController mwController;
     protected ModuleFragment moduleFragment;
     protected static HashMap<String, Fragment.SavedState> fragStates= new HashMap<>();
     
@@ -200,8 +219,12 @@ public class ModuleActivity extends FragmentActivity implements DeviceInfoFragme
             dialog.show(fm, "scan_fragment");
             break;
         case R.id.ble_disconnect:
-            device= null;
-            mwService.close(true);
+            if (mwController != null) {
+                device= null;
+                mwController.setRetainState(false);
+                mwController.close(true);
+                mwController= null;
+            }
             break;
         case R.id.action_about:
             final AppHelpFragment fragment = AppHelpFragment.getInstance(R.string.mw_about_text);
@@ -214,13 +237,6 @@ public class ModuleActivity extends FragmentActivity implements DeviceInfoFragme
     @Override
     public boolean onCreateOptionsMenu(final Menu menu) {
         getMenuInflater().inflate(R.menu.bledevice, menu);
-        if (mwController.isConnected()) {
-            menu.findItem(R.id.ble_connect).setVisible(false);
-            menu.findItem(R.id.ble_disconnect).setVisible(true);
-        } else {
-            menu.findItem(R.id.ble_connect).setVisible(true);
-            menu.findItem(R.id.ble_disconnect).setVisible(false);
-        }
         return true;
     }
     
@@ -233,5 +249,14 @@ public class ModuleActivity extends FragmentActivity implements DeviceInfoFragme
         if (moduleFragment != null) {
             getSupportFragmentManager().putFragment(outState, "mContent", moduleFragment);
         }
+    }
+    @Override
+    public MetaWearController getCurrentController() {
+        return mwController;
+    }
+    
+    @Override
+    public boolean hasController() {
+        return mwController != null;
     }
 }

@@ -14,7 +14,7 @@
  * Software and/or its documentation for any purpose.
  *
  * YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE 
- * PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
  * INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE, 
  * NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL 
  * MBIENTLAB OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT, NEGLIGENCE, 
@@ -46,9 +46,7 @@ import com.mbientlab.metawear.api.controller.MechanicalSwitch;
 import com.mbientlab.metawear.api.controller.Temperature;
 
 import android.app.Activity;
-import android.content.ComponentName;
 import android.os.Bundle;
-import android.os.IBinder;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
@@ -85,7 +83,7 @@ public class DeviceInfoFragment extends ModuleFragment {
     private DeviceCallbacks dCallback= new MetaWearController.DeviceCallbacks() {
         @Override
         public void connected() {
-            mwController.readDeviceInformation();
+            mwMnger.getCurrentController().readDeviceInformation();
             switchController.enableNotification();
         }
         
@@ -100,6 +98,13 @@ public class DeviceInfoFragment extends ModuleFragment {
             final Integer viewId= views.get(characteristic);
             if (viewId != null && isVisible()) {
                 ((TextView) getView().findViewById(viewId)).setText(values.get(characteristic));
+            }
+        }
+        
+        @Override
+        public void receivedRemoteRSSI(int rssi) {
+            if (isVisible()) {
+                ((TextView) getView().findViewById(R.id.remote_rssi)).setText(String.format(Locale.US, "%d ", rssi));
             }
         }
     };
@@ -178,16 +183,25 @@ public class DeviceInfoFragment extends ModuleFragment {
         ((TextView) view.findViewById(R.id.textView1)).setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mwController.readBatteryLevel();
+                mwMnger.getCurrentController().readBatteryLevel();
+            }
+        });
+        ((TextView) view.findViewById(R.id.textView2)).setOnClickListener(new Button.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mwMnger.getCurrentController().readRemoteRSSI();
             }
         });
     }
     
     @Override
     public void onDestroy() {
-        mwController.removeDeviceCallback(dCallback);
-        mwController.removeModuleCallback(mCallback);
-        mwController.removeModuleCallback(tempCallback);
+        final MetaWearController mwController= mwMnger.getCurrentController();
+        if (mwMnger.hasController()) {
+            mwController.removeDeviceCallback(dCallback);
+            mwController.removeModuleCallback(mCallback);
+            mwController.removeModuleCallback(tempCallback);
+        }
         super.onDestroy();
     }
 
@@ -196,27 +210,19 @@ public class DeviceInfoFragment extends ModuleFragment {
         super.onSaveInstanceState(outState);
         outState.putSerializable("STATE_VALUES", values);
     }
-
+    
     @Override
-    public void onServiceConnected(ComponentName name, IBinder service) {
-        super.onServiceConnected(name, service);
+    public void controllerReady(MetaWearController mwController) {
+        switchController= (MechanicalSwitch) mwController.getModuleController(Module.MECHANICAL_SWITCH);
+        tempController= (Temperature) mwController.getModuleController(Module.TEMPERATURE);
+        debugController= (Debug) mwController.getModuleController(Module.DEBUG);
         
-        switchController= (MechanicalSwitch) this.mwController.getModuleController(Module.MECHANICAL_SWITCH);
-        tempController= (Temperature)this.mwController.getModuleController(Module.TEMPERATURE);
-        debugController= (Debug)this.mwController.getModuleController(Module.DEBUG);
-        this.mwController.addDeviceCallback(dCallback);
-        this.mwController.addModuleCallback(mCallback).addModuleCallback(tempCallback);
+        mwController.addDeviceCallback(dCallback);
+        mwController.addModuleCallback(mCallback).addModuleCallback(tempCallback);
         
-        if (this.mwController.isConnected()) {
-            this.mwController.readDeviceInformation();
+        if (mwController.isConnected()) {
+            mwController.readDeviceInformation();
             switchController.enableNotification();
-        } else {
-            for(Entry<GATTCharacteristic, Integer> it: views.entrySet()) {
-                values.remove(it.getKey());
-                if (isVisible()) {
-                    ((TextView) getView().findViewById(it.getValue())).setText("");
-                }
-            }
         }
     }
     
