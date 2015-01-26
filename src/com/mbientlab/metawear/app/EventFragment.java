@@ -41,6 +41,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.mbientlab.metawear.api.MetaWearController;
 import com.mbientlab.metawear.api.Module;
@@ -401,14 +402,22 @@ public class EventFragment extends ModuleFragment {
         ((Button) view.findViewById(R.id.button1)).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                macros[macroSpinner.getSelectedItemPosition()].program();
+                if (mwMnger.controllerReady()) {
+                    macros[macroSpinner.getSelectedItemPosition()].program();
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
+                }
             }
         });
         ((Button) view.findViewById(R.id.button2)).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                macros[macroSpinner.getSelectedItemPosition()].cleanup();
-                eventController.removeMacros();
+                if (mwMnger.controllerReady()) {
+                    macros[macroSpinner.getSelectedItemPosition()].cleanup();
+                    eventController.removeMacros();
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
+                }
             }
         });
     }

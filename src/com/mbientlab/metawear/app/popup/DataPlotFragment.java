@@ -30,6 +30,8 @@
  */
 package com.mbientlab.metawear.app.popup;
 
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map.Entry;
@@ -38,15 +40,21 @@ import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.GraphViewDataInterface;
 import com.jjoe64.graphview.GraphViewSeries;
 import com.jjoe64.graphview.LineGraphView;
+import com.jjoe64.graphview.GraphView.GraphViewData;
 import com.jjoe64.graphview.GraphViewSeries.GraphViewSeriesStyle;
+import com.mbientlab.metawear.api.util.BytesInterpreter;
+import com.mbientlab.metawear.app.AccelerometerFragment.Configuration;
 import com.mbientlab.metawear.app.R;
 
+import android.app.Activity;
+import android.app.Dialog;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.LinearLayout;
 
 /**
@@ -55,24 +63,70 @@ import android.widget.LinearLayout;
  */
 public class DataPlotFragment extends DialogFragment {
     private final int[] chartColors= new int[] { Color.rgb(255, 0, 0), 
-            Color.rgb(0, 255, 0), Color.rgb(0, 0, 255), Color.rgb(0, 0, 0)};
+            Color.rgb(0, 255, 0), Color.rgb(0, 0, 255)};
     private final HashMap<String, GraphViewDataInterface[]> dataSeries= new HashMap<>();
+    private Configuration accelConfig;
+    
+    @Override
+    public void onAttach(Activity activity) {
+        super.onAttach(activity);
+        
+        if (!(activity instanceof Configuration)) {
+            throw new IllegalStateException(
+                    "Activity must implement AccelerometerFragment.Configuration interface.");
+        }
+        
+        accelConfig= (Configuration) activity;
+    }
+    
+    @Override
+    public Dialog onCreateDialog(Bundle savedInstanceState) {
+        ///< No title window code from: http://stackoverflow.com/a/15279400
+        
+        Dialog dialog = super.onCreateDialog(savedInstanceState);
+        dialog.getWindow().requestFeature(Window.FEATURE_NO_TITLE);
+        return dialog;
+    }
     
     @Override
     public View onCreateView (LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_data_plot, container);
     }
-    
-    //
-    
+
     @Override
     public void onViewCreated (View view, Bundle savedInstanceState) {
-        
+        final Collection<GraphViewDataInterface> convertedX= new ArrayList<>(), 
+                convertedY= new ArrayList<>(), convertedZ= new ArrayList<>();
+                
         GraphView graph= new LineGraphView(getActivity(), "");
         graph.setShowHorizontalLabels(false);
         graph.setScrollable(true);
         graph.setScalable(true);
         graph.setShowLegend(true);
+        
+        for(byte[] dataBytes: accelConfig.polledBytes()) {
+            ByteBuffer buffer= ByteBuffer.wrap(dataBytes);
+            double tickInS= (double) (buffer.getLong(6) / 1000.0);
+            float xAccel, yAccel, zAccel;
+            
+            if (accelConfig.firmwarePos() == 0) {
+                xAccel= buffer.getShort(0) / 1000.0f;
+                yAccel= buffer.getShort(2) / 1000.0f;
+                zAccel= buffer.getShort(4) / 1000.0f;
+            } else {
+                xAccel= BytesInterpreter.bytesToGs(accelConfig.getSamplingConfig(), buffer.getShort(0));
+                yAccel= BytesInterpreter.bytesToGs(accelConfig.getSamplingConfig(), buffer.getShort(2));
+                zAccel= BytesInterpreter.bytesToGs(accelConfig.getSamplingConfig(), buffer.getShort(4));
+            }
+            convertedX.add(new GraphViewData(tickInS, xAccel));
+            convertedY.add(new GraphViewData(tickInS, yAccel));
+            convertedZ.add(new GraphViewData(tickInS, zAccel));
+            
+        }
+        
+        addDataSeries("X-Axis", convertedX);
+        addDataSeries("Y-Axis", convertedY);
+        addDataSeries("Z-Axis", convertedZ);
         
         int colorIndex= 0;
         for(Entry<String, GraphViewDataInterface[]> data: dataSeries.entrySet()) {
@@ -84,7 +138,7 @@ public class DataPlotFragment extends DialogFragment {
         ((LinearLayout) view.findViewById(R.id.data_plot)).addView(graph);  
     }
     
-    public void addDataSeries(String legendTitle, final Collection<GraphViewDataInterface> graphData) {
+    private void addDataSeries(String legendTitle, final Collection<GraphViewDataInterface> graphData) {
         GraphViewDataInterface[] graphDataAsArray= new GraphViewDataInterface[graphData.size()];
         graphData.toArray(graphDataAsArray);
         

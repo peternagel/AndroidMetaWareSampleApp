@@ -30,13 +30,18 @@
  */
 package com.mbientlab.metawear.app;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.UUID;
 
+import com.mbientlab.metawear.api.GATT;
 import com.mbientlab.metawear.api.MetaWearBleService;
 import com.mbientlab.metawear.api.MetaWearController;
 
 import no.nordicsemi.android.nrftoolbox.AppHelpFragment;
 import no.nordicsemi.android.nrftoolbox.dfu.DfuActivity;
+import no.nordicsemi.android.nrftoolbox.dfu.DfuService;
 import no.nordicsemi.android.nrftoolbox.scanner.ScannerFragment;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
@@ -60,8 +65,8 @@ import android.widget.Toast;
  * @author etsai
  *
  */
-public class ModuleActivity extends FragmentActivity implements DeviceInfoFragment.Callbacks, 
-        ScannerFragment.OnDeviceSelectedListener, ModuleFragment.MetaWearManager, ServiceConnection {
+public class ModuleActivity extends FragmentActivity implements ScannerFragment.OnDeviceSelectedListener, 
+        ModuleFragment.MetaWearManager, ServiceConnection, AccelerometerFragment.Configuration {
     public static final String EXTRA_BLE_DEVICE= 
             "com.mbientlab.metawear.app.ModuleActivity.EXTRA_BLE_DEVICE";
     protected static final String ARG_ITEM_ID = "item_id";
@@ -71,6 +76,7 @@ public class ModuleActivity extends FragmentActivity implements DeviceInfoFragme
     protected static final int START_MODULE_DETAIL= 2;
     protected static BluetoothDevice device;
     
+    @SuppressWarnings("unchecked")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -88,18 +94,19 @@ public class ModuleActivity extends FragmentActivity implements DeviceInfoFragme
         if (savedInstanceState != null) {
             device= (BluetoothDevice) savedInstanceState.getParcelable(EXTRA_BLE_DEVICE);
             moduleFragment= (ModuleFragment) getSupportFragmentManager().getFragment(savedInstanceState, "mContent");
+            
+            tapType= savedInstanceState.getInt(Extra.TAP_TYPE);
+            tapAxis= savedInstanceState.getInt(Extra.TAP_AXIS);
+            shakeAxis= savedInstanceState.getInt(Extra.SHAKE_AXIS);
+            dataRange= savedInstanceState.getInt(Extra.DATA_RANGE);
+            samplingRate= savedInstanceState.getInt(Extra.SAMPLING_RATE);
+            ffMovement= savedInstanceState.getBoolean(Extra.FF_MOVEMENT);
+            newFirmware= savedInstanceState.getBoolean(Extra.NEW_FIRMWARE);
+            samplingConfigBytes= savedInstanceState.getByteArray(Extra.SAMPLING_CONFIG_BYTES);
+            polledData= (ArrayList<byte []>) savedInstanceState.getSerializable(Extra.POLLED_DATA);
         }
     }
-    /* (non-Javadoc)
-     * @see com.mbientlab.metawear.app.DeviceInfoFragment.Callbacks#startDfu()
-     */
-    @Override
-    public void startDfu() {
-        final Intent dfu= new Intent(this, DfuActivity.class);
-        dfu.putExtra(EXTRA_BLE_DEVICE, device);
-        startActivityForResult(dfu, DFU);
-    }
-    
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         switch(requestCode) {
@@ -215,7 +222,8 @@ public class ModuleActivity extends FragmentActivity implements DeviceInfoFragme
         switch (item.getItemId()) {
         case R.id.ble_connect:
             final FragmentManager fm = getSupportFragmentManager();
-            final ScannerFragment dialog = ScannerFragment.getInstance(ModuleActivity.this, null, true);
+            final ScannerFragment dialog = ScannerFragment.getInstance(ModuleActivity.this, 
+                    new UUID[] {GATT.GATTService.METAWEAR.uuid(), DfuService.DFU_SERVICE_UUID}, true);
             dialog.show(fm, "scan_fragment");
             break;
         case R.id.ble_disconnect:
@@ -225,6 +233,11 @@ public class ModuleActivity extends FragmentActivity implements DeviceInfoFragme
                 mwController.close(true);
                 mwController= null;
             }
+            break;
+        case R.id.metawear_dfu:
+            final Intent dfu= new Intent(this, DfuActivity.class);
+            dfu.putExtra(EXTRA_BLE_DEVICE, device);
+            startActivityForResult(dfu, DFU);
             break;
         case R.id.action_about:
             final AppHelpFragment fragment = AppHelpFragment.getInstance(R.string.mw_about_text);
@@ -249,6 +262,16 @@ public class ModuleActivity extends FragmentActivity implements DeviceInfoFragme
         if (moduleFragment != null) {
             getSupportFragmentManager().putFragment(outState, "mContent", moduleFragment);
         }
+        
+        outState.putInt(Extra.TAP_TYPE, tapType);
+        outState.putInt(Extra.TAP_AXIS, tapAxis);
+        outState.putInt(Extra.SHAKE_AXIS, shakeAxis);
+        outState.putInt(Extra.DATA_RANGE, dataRange);
+        outState.putInt(Extra.SAMPLING_RATE, samplingRate);
+        outState.putBoolean(Extra.FF_MOVEMENT, ffMovement);
+        outState.putBoolean(Extra.NEW_FIRMWARE, newFirmware);
+        outState.putByteArray(Extra.SAMPLING_CONFIG_BYTES, samplingConfigBytes);
+        outState.putSerializable(Extra.POLLED_DATA, polledData);
     }
     @Override
     public MetaWearController getCurrentController() {
@@ -258,5 +281,95 @@ public class ModuleActivity extends FragmentActivity implements DeviceInfoFragme
     @Override
     public boolean hasController() {
         return mwController != null;
+    }
+    
+
+    /* (non-Javadoc)
+     * @see com.mbientlab.metawear.app.ModuleFragment.MetaWearManager#controllerReady()
+     */
+    @Override
+    public boolean controllerReady() {
+        return hasController() && mwController.isConnected();
+    }
+
+    private class Extra {
+        public static final String TAP_TYPE= 
+                "com.mbientlab.metawear.app.ModuleActivity.Extra.TAP_TYPE";
+        public static final String TAP_AXIS= 
+                "com.mbientlab.metawear.app.ModuleActivity.Extra.TAP_AXIS";
+        public static final String SHAKE_AXIS= 
+                "com.mbientlab.metawear.app.ModuleActivity.Extra.SHAKE_AXIS";
+        public static final String DATA_RANGE= 
+                "com.mbientlab.metawear.app.ModuleActivity.Extra.DATA_RANGE";
+        public static final String SAMPLING_RATE= 
+                "com.mbientlab.metawear.app.ModuleActivity.Extra.SAMPLING_RATE";
+        public static final String FF_MOVEMENT= 
+                "com.mbientlab.metawear.app.ModuleActivity.Extra.FF_MOVEMENT";
+        public static final String NEW_FIRMWARE= 
+                "com.mbientlab.metawear.app.ModuleActivity.Extra.NEW_FIRMWARE";
+        public static final String SAMPLING_CONFIG_BYTES= 
+                "com.mbientlab.metawear.app.ModuleActivity.Extra.SAMPLING_CONFIG_BYTES";
+        public static final String POLLED_DATA= 
+                "com.mbientlab.metawear.app.ModuleActivity.Extra.POLLED_DATA";
+    }
+    
+    private ArrayList<byte []> polledData;
+    private byte[] samplingConfigBytes;
+    private int tapType= 0, tapAxis= 2, shakeAxis= 0, dataRange= 2, samplingRate= 3;
+    private boolean ffMovement= true, newFirmware= true;
+    
+    public int tapTypePos() { return tapType; }
+    public int tapAxisPos() { return tapAxis; }
+    public int movementPos() { return ffMovement ? 0 : 1; }
+    public int shakeAxisPos() { return shakeAxis; }
+    public int fsrPos() { return dataRange; }
+    public int odrPos() { return samplingRate; }
+    public int firmwarePos() { return newFirmware ? 0 : 1; }
+
+    public void modifyTapType(int newIndex) {
+        tapType= newIndex;
+    }
+    public void modifyTapAxis(int newIndex) {
+        tapAxis= newIndex;
+    }
+    public void modifyShakeAxis(int newIndex) {
+        shakeAxis= newIndex;
+    }
+    public void modifyMovementType(int newIndex) {
+        ffMovement= newIndex == 0;
+    }
+    public void modifyDataRange(int newIndex) {
+        dataRange= newIndex;
+    }
+    public void modifySamplingRate(int newIndex) {
+        samplingRate= newIndex;
+    }
+    public void modifyFirmwareVersion(int newIndex) {
+        newFirmware= newIndex == 0;
+    }
+
+    /* (non-Javadoc)
+     * @see com.mbientlab.metawear.app.AccelerometerFragment.SamplingData#polledBytes()
+     */
+    @Override
+    public Collection<byte[]> polledBytes() {
+        return polledData;
+    }
+
+    /* (non-Javadoc)
+     * @see com.mbientlab.metawear.app.AccelerometerFragment.SamplingData#getSamplingConfig()
+     */
+    @Override
+    public byte[] getSamplingConfig() {
+        return samplingConfigBytes;
+    }
+
+    /* (non-Javadoc)
+     * @see com.mbientlab.metawear.app.AccelerometerFragment.SamplingData#setSamplingConfig(byte[])
+     */
+    @Override
+    public void initialize(byte[] config) {
+        samplingConfigBytes= config;
+        polledData= new ArrayList<>();
     }
 }

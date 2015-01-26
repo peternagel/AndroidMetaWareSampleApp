@@ -40,17 +40,16 @@ import com.mbientlab.metawear.api.controller.GPIO.AnalogMode;
 import com.mbientlab.metawear.api.controller.GPIO.PullMode;
 
 import android.os.Bundle;
-import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.inputmethod.EditorInfo;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.widget.AdapterView.OnItemSelectedListener;
 
 /**
@@ -58,7 +57,7 @@ import android.widget.AdapterView.OnItemSelectedListener;
  *
  */
 public class GPIOFragment extends ModuleFragment {
-    private byte gpioPin;
+    private EditText pinText;
     private GPIO gpioController;
     private PullMode pullMode;
     
@@ -90,8 +89,6 @@ public class GPIOFragment extends ModuleFragment {
         return inflater.inflate(R.layout.fragment_gpio, container, false);
     }
     
-    private int digitalCmdIndex;
-    private String[] digitalCommands= {"Set Input", "Read Input", "Set Output", "Clear Output"};
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         Spinner pullModeSpinner= (Spinner) view.findViewById(R.id.spinner2);
@@ -108,65 +105,93 @@ public class GPIOFragment extends ModuleFragment {
         pullModeSpinner.setAdapter(new ArrayAdapter<PullMode>(getActivity(), 
                 R.layout.command_row, R.id.command_name, PullMode.values));
         
-        Spinner digitalSpinner= (Spinner) view.findViewById(R.id.spinner3);
-        digitalSpinner.setOnItemSelectedListener(new OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view,
-                    int position, long id) {
-                digitalCmdIndex= position;
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) { }
-        });
-        digitalSpinner.setAdapter(new ArrayAdapter<String>(getActivity(), 
-                R.layout.command_row, R.id.command_name, digitalCommands));
-        
-        
         ((Button) view.findViewById(R.id.button1)).setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
-                gpioController.readAnalogInput(gpioPin, AnalogMode.ABSOLUTE_VALUE);
-                gpioController.readAnalogInput(gpioPin, AnalogMode.SUPPLY_RATIO);
+                if (mwMnger.controllerReady()) {
+                    try {
+                        byte gpioPin= Byte.valueOf(pinText.getEditableText().toString());
+                        
+                        gpioController.readAnalogInput(gpioPin, AnalogMode.ABSOLUTE_VALUE);
+                        gpioController.readAnalogInput(gpioPin, AnalogMode.SUPPLY_RATIO);
+                    } catch (NumberFormatException ex) {
+                        Toast.makeText(getActivity(), ex.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
+                }
             }
         });
         
         ((Button) view.findViewById(R.id.button2)).setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
-                switch(digitalCmdIndex) {
-                case 0:
-                    gpioController.setDigitalInput(gpioPin, pullMode);
-                    break;
-                case 1:
-                    gpioController.readDigitalInput(gpioPin);
-                    break;
-                case 2:
-                    gpioController.setDigitalOutput(gpioPin);
-                    break;
-                case 3:
-                    gpioController.clearDigitalOutput(gpioPin);
-                    break;
+                if (mwMnger.controllerReady()) {
+                    try {
+                        byte gpioPin= Byte.valueOf(pinText.getEditableText().toString());
+                    
+                        gpioController.setDigitalInput(gpioPin, pullMode);
+                    } catch (NumberFormatException ex) {
+                        Toast.makeText(getActivity(), ex.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
                 }
-                
             }
         });
         
-        EditText pinText= ((EditText) view.findViewById(R.id.editText1));
-        
-        pinText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+        ((Button) view.findViewById(R.id.button3)).setOnClickListener(new Button.OnClickListener() {
             @Override
-            public boolean onEditorAction(TextView v, int actionId,
-                    KeyEvent event) {
-                switch (actionId) {
-                case EditorInfo.IME_ACTION_DONE:
-                case EditorInfo.IME_ACTION_NEXT:
-                    gpioPin= Byte.valueOf(((EditText) v).getEditableText().toString());
-                    break;
+            public void onClick(View v) {
+                if (mwMnger.controllerReady()) {
+                    try {
+                        byte gpioPin= Byte.valueOf(pinText.getEditableText().toString());
+                        
+                        gpioController.readDigitalInput(gpioPin);
+                    } catch (NumberFormatException ex) {
+                        Toast.makeText(getActivity(), ex.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
                 }
-                return false;
             }
         });
+        
+        ((Button) view.findViewById(R.id.button4)).setOnClickListener(new Button.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mwMnger.controllerReady()) {
+                    try {
+                        byte gpioPin= Byte.valueOf(pinText.getEditableText().toString());
+                        
+                        gpioController.setDigitalOutput(gpioPin);
+                    } catch (NumberFormatException ex) {
+                        Toast.makeText(getActivity(), ex.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
+                }
+            }
+        });
+        
+        ((Button) view.findViewById(R.id.button5)).setOnClickListener(new Button.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mwMnger.controllerReady()) {
+                    try {
+                        byte gpioPin= Byte.valueOf(pinText.getEditableText().toString());
+                        
+                        gpioController.clearDigitalOutput(gpioPin);
+                    } catch (NumberFormatException ex) {
+                        Toast.makeText(getActivity(), ex.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
+                }
+            }
+        });
+        
+        pinText= ((EditText) view.findViewById(R.id.editText1));
     }
     
     @Override

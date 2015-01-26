@@ -162,23 +162,31 @@ public class IBeaconFragment extends ModuleFragment {
         ((Button) view.findViewById(R.id.button1)).setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
-                try {
-                    ibeaconController.setUUID(UUID.fromString(values.get(R.id.editText1)))
-                            .setMajor(Short.parseShort(values.get(R.id.editText2)))
-                            .setMinor(Short.parseShort(values.get(R.id.editText3)))
-                            .setCalibratedRXPower(Byte.parseByte(values.get(R.id.editText4)))
-                            .setTXPower(Byte.parseByte(values.get(R.id.editText5)))
-                            .setAdvertisingPeriod(Short.parseShort(values.get(R.id.editText6)))
-                            .enableIBeacon();
-                } catch (Exception ex) {
-                    Toast.makeText(getActivity(), ex.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+                if (mwMnger.controllerReady()) {
+                    try {
+                        ibeaconController.setUUID(UUID.fromString(values.get(R.id.editText1)))
+                                .setMajor(Short.parseShort(values.get(R.id.editText2)))
+                                .setMinor(Short.parseShort(values.get(R.id.editText3)))
+                                .setCalibratedRXPower(Byte.parseByte(values.get(R.id.editText4)))
+                                .setTXPower(Byte.parseByte(values.get(R.id.editText5)))
+                                .setAdvertisingPeriod(Short.parseShort(values.get(R.id.editText6)))
+                                .enableIBeacon();
+                    } catch (Exception ex) {
+                        Toast.makeText(getActivity(), ex.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
                 }
             }
         });
         ((Button) view.findViewById(R.id.button2)).setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
-                ibeaconController.disableIBecon();
+                if (mwMnger.controllerReady()) {
+                    ibeaconController.disableIBecon();
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
+                }
             }
         });
         

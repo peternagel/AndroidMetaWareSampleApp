@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.mbientlab.metawear.app"
-    android:versionCode="5"
-    android:versionName="2.3" >
+    android:versionCode="6"
+    android:versionName="2.4" >
 
     <uses-sdk
         android:minSdkVersion="18"
@@ -54,7 +54,6 @@
         </activity>
         <activity
             android:name="com.mbientlab.metawear.app.ModuleDetailActivity"
-            android:label="@string/title_module_detail"
             android:parentActivityName="com.mbientlab.metawear.app.ModuleListActivity" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"

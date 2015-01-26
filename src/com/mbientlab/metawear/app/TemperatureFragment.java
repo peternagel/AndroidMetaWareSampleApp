@@ -35,7 +35,6 @@ import java.util.Locale;
 import com.mbientlab.metawear.api.MetaWearController;
 import com.mbientlab.metawear.api.Module;
 import com.mbientlab.metawear.api.controller.Temperature;
-import com.mbientlab.metawear.api.controller.Temperature.SamplingConfig;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -44,11 +43,9 @@ import android.view.View.OnClickListener;
 import android.view.animation.AlphaAnimation;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.CompoundButton.OnCheckedChangeListener;
-import android.widget.ToggleButton;
+import android.widget.Toast;
 
 /**
  * @author etsai
@@ -62,17 +59,11 @@ public class TemperatureFragment extends ModuleFragment {
     }
     
     private Temperature.Callbacks mCallback= new Temperature.Callbacks() {
-
         @Override
         public void receivedTemperature(float degrees) {
             if (isVisible()) {
                 ((TextView) getView().findViewById(R.id.textView2)).setText(String.format(Locale.US, "%1$.2f C", degrees));
             }
-        }
-
-        @Override
-        public void receivedSamplingConfig(SamplingConfig config) {
-            
         }
 
         @Override
@@ -94,7 +85,6 @@ public class TemperatureFragment extends ModuleFragment {
                 thsText.startAnimation(fadeOut);
             }
         }
-        
     };
     
     @Override
@@ -112,7 +102,11 @@ public class TemperatureFragment extends ModuleFragment {
         ((TextView) view.findViewById(R.id.textView1)).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                tempController.readTemperature();
+                if (mwMnger.controllerReady()) {
+                    tempController.readTemperature();
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
+                }
             }
         });
         
@@ -124,32 +118,58 @@ public class TemperatureFragment extends ModuleFragment {
         ((Button) view.findViewById(R.id.button1)).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                tempController.enableSampling().withSampingPeriod(Integer.parseInt(tempPolling.getEditableText().toString()))
-                    .withTemperatureDelta(Float.parseFloat(tempDelta.getEditableText().toString()))
-                    .withTemperatureBoundary(Float.parseFloat(tempLower.getEditableText().toString()), 
-                            Float.parseFloat(tempUpper.getEditableText().toString()))
-                    .commit();
+                if (mwMnger.controllerReady()) {
+                    try {
+                        tempController.enableSampling()
+                                .withSampingPeriod(Integer.parseInt(tempPolling.getEditableText().toString()))
+                                .withTemperatureDelta(Float.parseFloat(tempDelta.getEditableText().toString()))
+                                .withTemperatureBoundary(Float.parseFloat(tempLower.getEditableText().toString()), 
+                                        Float.parseFloat(tempUpper.getEditableText().toString()))
+                                .commit();
+                    } catch (NumberFormatException ex) {
+                        Toast.makeText(getActivity(), ex.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+                    } 
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
+                }
             }
         });
         ((Button) view.findViewById(R.id.button2)).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                tempController.disableSampling();
+                if (mwMnger.controllerReady()) {
+                    tempController.disableSampling();
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
+                }
             }
         });
         
         analogPin= (EditText) view.findViewById(R.id.editText5);
         pulldownPin= (EditText) view.findViewById(R.id.editText6);
         
-        ((ToggleButton) view.findViewById(R.id.toggleButton1)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
+        ((Button) view.findViewById(R.id.button3)).setOnClickListener(new OnClickListener() {
             @Override
-            public void onCheckedChanged(CompoundButton buttonView,
-                    boolean isChecked) {
-                if (isChecked) {
-                    tempController.enableThermistorMode(Byte.valueOf(analogPin.getEditableText().toString()), 
-                            Byte.valueOf(pulldownPin.getEditableText().toString()));
+            public void onClick(View v) {
+                if (mwMnger.controllerReady()) {
+                    try { 
+                        tempController.enableThermistorMode(Byte.valueOf(analogPin.getEditableText().toString()), 
+                                Byte.valueOf(pulldownPin.getEditableText().toString()));
+                    } catch (NumberFormatException ex) {
+                        Toast.makeText(getActivity(), R.string.error_thermistor_pins, Toast.LENGTH_SHORT).show();
+                    }
                 } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
+                }
+            }
+        });
+        ((Button) view.findViewById(R.id.button4)).setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mwMnger.controllerReady()) {
                     tempController.disableThermistorMode();
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
                 }
             }
         });

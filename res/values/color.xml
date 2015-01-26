@@ -15,6 +15,8 @@
     <color name="headerTextColor">#FFFFFF</color>
     <color name="dividerColor">#BBBDC0</color>
     
+    <color name="lightGray">#D3D3D3</color>
     <color name="darkGray">#AAABAF</color>
     <color name="action_text">#3D3AB0</color>
+    <color name="reset">#E82C0C</color>
 </resources>

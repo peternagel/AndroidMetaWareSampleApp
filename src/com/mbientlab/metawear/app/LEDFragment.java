@@ -32,12 +32,12 @@ package com.mbientlab.metawear.app;
 
 import java.util.HashMap;
 import java.util.HashSet;
-
 import com.mbientlab.metawear.api.MetaWearController;
 import com.mbientlab.metawear.api.Module;
 import com.mbientlab.metawear.api.controller.LED;
+import com.mbientlab.metawear.api.controller.LED.ChannelDataWriter;
 import com.mbientlab.metawear.api.controller.LED.ColorChannel;
-
+import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -50,20 +50,59 @@ import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.SeekBar;
 import android.widget.Spinner;
+import android.widget.Toast;
 
 /**
  * @author etsai
  *
  */
 public class LEDFragment extends ModuleFragment {
+    private interface Pattern {
+        public void program(ChannelDataWriter writer);
+    }
+    
+    private final Pattern[] ledPatterns= {
+        new Pattern() {
+            @Override
+            public void program(ChannelDataWriter writer) {
+                writer.withHighTime((short) 50).withPulseDuration((short) 500)
+                        .withRepeatCount((byte) -1).commit();
+            }
+            @Override
+            public String toString() {
+                return "Blink";
+            }
+        },
+        new Pattern() {
+            @Override
+            public void program(ChannelDataWriter writer) {
+                writer.withHighTime((short) 500).withPulseDuration((short) 500)
+                        .withRepeatCount((byte) -1).commit();
+            }
+            @Override
+            public String toString() {
+                return "Flashlight";
+            }
+        },
+        new Pattern() {
+            @Override
+            public void program(ChannelDataWriter writer) {
+                writer.withRiseTime((short) 750).withFallTime((short) 750)
+                        .withHighTime((short) 500).withPulseDuration((short) 2000)
+                        .withRepeatCount((byte) -1).commit();
+            }
+            @Override
+            public String toString() {
+                return "Pulse";
+            }
+        }
+    };
+    
     private LED ledController;
-    
-    private  final short RISE_TIME= 500, HIGH_TIME= 500, FALL_TIME= 500, DURATION= 2000;
-    private static final byte REPEAT_COUNT= 10;
-    
     private HashMap<ColorChannel, HashMap<Integer, Integer>> values= new HashMap<>();
     private HashMap<Integer, SeekBar> seekBarRefs= new HashMap<>();
     private ColorChannel currentChannel= ColorChannel.GREEN;
+    private Pattern currentPattern= ledPatterns[0];
 
     private static final HashSet<Integer> seekBars;
     static {        
@@ -79,19 +118,31 @@ public class LEDFragment extends ModuleFragment {
         ((ImageButton)rootView.findViewById(R.id.imageButton3)).setOnClickListener(new OnClickListener(){
             @Override
             public void onClick(View v) {
-                ledController.stop(false);
+                if (mwMnger.controllerReady()) {
+                    ledController.stop(false);
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
+                }
             }
         });
         ((ImageButton)rootView.findViewById(R.id.imageButton1)).setOnClickListener(new OnClickListener(){
             @Override
             public void onClick(View v) {
-                ledController.play(false);
+                if (mwMnger.controllerReady()) {
+                    ledController.play(false);
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
+                }
             }
         });
         ((ImageButton)rootView.findViewById(R.id.imageButton2)).setOnClickListener(new OnClickListener(){
             @Override
             public void onClick(View v) {
-                ledController.pause();
+                if (mwMnger.controllerReady()) {
+                    ledController.pause();
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
+                }
             }
         });
         
@@ -121,7 +172,7 @@ public class LEDFragment extends ModuleFragment {
         for(final Integer it: seekBars) {
             seekBarRefs.put(it, (SeekBar) view.findViewById(it));
             seekBarRefs.get(it).setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-
+                @SuppressLint("UseSparseArrays")
                 @Override
                 public void onProgressChanged(SeekBar seekBar, int progress,
                         boolean fromUser) { 
@@ -141,14 +192,27 @@ public class LEDFragment extends ModuleFragment {
         ((Button) view.findViewById(R.id.button1)).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                ledController.setColorChannel(currentChannel).withHighIntensity((byte)seekBarRefs.get(R.id.seekBar1).getProgress())
-                        .withLowIntensity((byte)seekBarRefs.get(R.id.seekBar2).getProgress())
-                        .withRiseTime(RISE_TIME).withHighTime(HIGH_TIME).withFallTime(FALL_TIME)
-                        .withPulseDuration(DURATION).withRepeatCount(REPEAT_COUNT).commit();
+                if (mwMnger.controllerReady()) {
+                    ChannelDataWriter writer= ledController.setColorChannel(currentChannel)
+                            .withHighIntensity((byte)seekBarRefs.get(R.id.seekBar1).getProgress());
+                    currentPattern.program(writer);
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
+                }
             }
         });
-        Spinner colorSpinner= (Spinner) view.findViewById(R.id.spinner1);
-        colorSpinner.setOnItemSelectedListener(new OnItemSelectedListener() {
+        ((Button) view.findViewById(R.id.button2)).setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mwMnger.controllerReady()) {
+                    ledController.stop(true);
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
+                }
+            }
+        });
+        Spinner tempSpinner= (Spinner) view.findViewById(R.id.spinner1);
+        tempSpinner.setOnItemSelectedListener(new OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view,
                     int position, long id) {
@@ -165,7 +229,22 @@ public class LEDFragment extends ModuleFragment {
             @Override
             public void onNothingSelected(AdapterView<?> parent) { }
         });
-        colorSpinner.setAdapter(new ArrayAdapter<ColorChannel>(getActivity(), 
+        tempSpinner.setAdapter(new ArrayAdapter<ColorChannel>(getActivity(), 
                 R.layout.command_row, R.id.command_name, ColorChannel.values));
+        
+        tempSpinner= (Spinner) view.findViewById(R.id.spinner2);
+        tempSpinner.setOnItemSelectedListener(new OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view,
+                    int position, long id) {
+                currentPattern= ledPatterns[position];
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> arg0) { }
+            
+        });
+        tempSpinner.setAdapter(new ArrayAdapter<Pattern>(getActivity(),
+                R.layout.command_row, R.id.command_name, ledPatterns));
     }
 }

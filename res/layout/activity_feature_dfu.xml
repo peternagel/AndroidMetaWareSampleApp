@@ -5,7 +5,8 @@
   The information contained herein is property of Nordic Semiconductor ASA.
   Terms and conditions of usage are described in detail in NORDIC SEMICONDUCTOR STANDARD SOFTWARE LICENSE AGREEMENT.
   Licensees are granted free, non-transferable use of the information. NO WARRANTY of ANY KIND is provided. 
-  This heading must NOT be removed from the file.-->
+  This heading must NOT be removed from the file.
+-->
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent" >
@@ -120,7 +121,8 @@
                 </TableRow>
             </TableLayout>
 
-            <LinearLayout
+            <RelativeLayout
+                android:id="@+id/RelativeLayout1"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="@dimen/feature_section_padding"
@@ -133,23 +135,29 @@
                     android:id="@+id/action_select_file"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_alignParentLeft="true"
+                    android:layout_alignParentTop="true"
                     android:onClick="onSelectFileClicked"
                     android:text="@string/dfu_action_select_file" />
                 
                 <Button
-                    android:id="@+id/action_update_latest"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:onClick="onUpdateLatestClicked"
-                    android:text="@string/dfu_action_update_latest" />
+	                android:id="@+id/action_update_latest"
+	                android:layout_below="@+id/action_select_file"
+	                android:layout_width="wrap_content"
+	                android:layout_height="wrap_content"
+	                android:onClick="onUpdateLatestClicked"
+	                android:text="@string/dfu_action_update_latest" />
 
                 <ImageView
+                    android:id="@+id/ImageView1"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginLeft="10dp"
+                    android:layout_alignParentTop="true"
+                    android:layout_toRightOf="@+id/action_select_file"
                     android:onClick="onSelectFileHelpClicked"
                     android:src="@drawable/ic_help" />
-            </LinearLayout>
+
+            </RelativeLayout>
         </LinearLayout>
 
         <!-- DFU section -->
@@ -203,4 +211,5 @@
                 android:visibility="invisible" />
         </LinearLayout>
     </LinearLayout>
+
 </RelativeLayout>

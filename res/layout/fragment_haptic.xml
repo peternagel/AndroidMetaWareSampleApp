@@ -15,7 +15,7 @@ derivative works of, modify, distribute, perform, display or sell this
 Software and/or its documentation for any purpose.
 
 YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE 
-PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
 INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE, 
 NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL 
 MBIENTLAB OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT, NEGLIGENCE, 
@@ -45,7 +45,7 @@ contact MbientLab Inc, at www.mbientlab.com.
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="0.50"
-            android:text="Duty Cycle" />
+            android:text="@string/label_haptic_duty_cycle" />
 
         <EditText
             android:id="@+id/editText2"
@@ -53,8 +53,8 @@ contact MbientLab Inc, at www.mbientlab.com.
             android:layout_height="wrap_content"
             android:layout_weight="1.5"
             android:ems="10"
-            android:inputType="number"
-            android:hint="[0, 100] percent" />
+            android:hint="@string/label_haptic_duty_cycle_hint"
+            android:inputType="number" />
     </LinearLayout>
 
     <LinearLayout
@@ -67,7 +67,7 @@ contact MbientLab Inc, at www.mbientlab.com.
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="0.50"
-            android:text="Pulse Width" />
+            android:text="@string/label_haptic_pulse_width" />
 
         <EditText
             android:id="@+id/editText1"
@@ -75,7 +75,7 @@ contact MbientLab Inc, at www.mbientlab.com.
             android:layout_height="wrap_content"
             android:layout_weight="1.5"
             android:ems="10"
-            android:hint="[0, 65535] ms"
+            android:hint="@string/label_haptic_pulse_width_hint"
             android:inputType="number" >
 
             <requestFocus />
@@ -86,20 +86,22 @@ contact MbientLab Inc, at www.mbientlab.com.
         android:id="@+id/LinearLayout1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_horizontal"
-        android:orientation="vertical" >
+        style="?android:attr/buttonBarStyle"
+        android:gravity="center_horizontal" >
 
         <Button
             android:id="@+id/button1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Run Motor" />
+            style="@style/MetaWear.Button"
+            android:text="@string/label_haptic_motor" />
 
         <Button
             android:id="@+id/button2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Run Buzzer" />
+            style="@style/MetaWear.Button"
+            android:text="@string/label_haptic_buzzer" />
     </LinearLayout>
 
 </LinearLayout>

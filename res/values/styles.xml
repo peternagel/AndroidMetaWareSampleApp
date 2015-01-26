@@ -1,5 +1,11 @@
-<resources>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <style name="MetaWear" />
+    
+    <style name="MetaWear.Button">
+        <item name="android:textColor">@color/action_text</item>
+        <item name="android:background">@drawable/button_selector</item>
+    </style>
     <!--
         Base application theme, dependent on API level. This theme is replaced
         by AppBaseTheme from res/values-vXX/styles.xml on newer devices.

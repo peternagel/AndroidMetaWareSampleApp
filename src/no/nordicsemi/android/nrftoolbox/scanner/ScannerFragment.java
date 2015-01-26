@@ -121,7 +121,7 @@ public class ScannerFragment extends DialogFragment {
 	private Button mScanButton;
 
 	private boolean mIsCustomUUID;
-	private UUID mUuid;
+	private UUID[] mUuid;
 
 	private boolean mIsScanning = false;
 
@@ -133,12 +133,16 @@ public class ScannerFragment extends DialogFragment {
 	 * Static implementation of fragment so that it keeps data when phone orientation is changed For standard BLE Service UUID, we can filter devices using normal android provided command
 	 * startScanLe() with required BLE Service UUID For custom BLE Service UUID, we will use class ScannerServiceParser to filter out required device.
 	 */
-	public static ScannerFragment getInstance(final Context context, final UUID uuid, final boolean isCustomUUID) {
+	public static ScannerFragment getInstance(final Context context, final UUID[] uuids, final boolean isCustomUUID) {
 		final ScannerFragment fragment = new ScannerFragment();
+		final ParcelUuid[] pUuids= new ParcelUuid[uuids.length];
 
+		for(int i= 0; i < uuids.length; i++) {
+		    pUuids[i]= new ParcelUuid(uuids[i]);
+		}
 		final Bundle args = new Bundle();
-		args.putParcelable(PARAM_UUID, new ParcelUuid(uuid));
 		args.putBoolean(CUSTOM_UUID, isCustomUUID);
+		args.putParcelableArray(PARAM_UUID, pUuids);
 		fragment.setArguments(args);
 		return fragment;
 	}
@@ -183,8 +187,12 @@ public class ScannerFragment extends DialogFragment {
 
 		final Bundle args = getArguments();
 		if (args.containsKey(CUSTOM_UUID)) {
-			final ParcelUuid pu = args.getParcelable(PARAM_UUID);
-			mUuid = pu.getUuid();
+			final ParcelUuid[] pu = (ParcelUuid[]) args.getParcelableArray(PARAM_UUID);
+			mUuid = new UUID[pu.length];
+			
+			for(int i= 0; i < pu.length; i++) {
+			    mUuid[i]= pu[i].getUuid();
+			}
 		}
 		mIsCustomUUID = args.getBoolean(CUSTOM_UUID);
 
@@ -261,9 +269,7 @@ public class ScannerFragment extends DialogFragment {
 		if (mIsCustomUUID) {
 			mBluetoothAdapter.startLeScan(mLEScanCallback);
 		} else {
-			final UUID[] uuids = new UUID[1];
-			uuids[0] = mUuid;
-			mBluetoothAdapter.startLeScan(uuids, mLEScanCallback);
+			mBluetoothAdapter.startLeScan(mUuid, mLEScanCallback);
 		}
 
 		mIsScanning = true;

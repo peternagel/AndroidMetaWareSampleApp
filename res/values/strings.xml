@@ -31,10 +31,10 @@ contact MbientLab Inc, at www.mbientlab.com.
  
 -->
 <resources>
-
     <string name="app_name">MetaWear</string>
     <string name="label_mac_address">MAC Address</string>
     <string name="label_accelerometer">Accelerometer</string>
+    <string name="label_accelerometer_data">Accelerometer Data</string>
     <string name="label_led_state">LED State</string>
     <string name="label_led_color">LED Color</string>
     <string name="label_orientation">Orientation</string>
@@ -46,13 +46,12 @@ contact MbientLab Inc, at www.mbientlab.com.
     <string name="label_temperature"><b><i>Temperature</i></b></string>
     <string name="label_battery_level"><b><i>Battery Level</i></b></string>
     <string name="label_remote_rssi"><b><i>Remote RSSI</i></b></string>
-    <string name="label_accelerometer_data">Accelerometer Data</string>
+    <string name="label_reset"><b><i>Reset</i></b></string>
     <string name="label_freefall_status">In Free Fall</string>
     <string name="label_led_red">Red</string>
     <string name="label_led_green">Green</string>
     <string name="label_led_blue">Blue</string>
     <string name="label_commands">Commands</string>
-    <string name="title_module_detail">Module Detail</string>
     
     <string name="text_connected">Device Connected</string>
     <string name="text_lost_connection">Connection Lost</string>
@@ -99,20 +98,10 @@ contact MbientLab Inc, at www.mbientlab.com.
     <string name="about_text">The nRF Toolbox is a container application that stores your Nordic Semiconductor apps in one location.</string>
     <string name="label_connect">Connect</string>
     <string name="label_disconnect">Disconnect</string>
-    <string name="label_dfu">dfu</string>
+    <string name="label_dfu">DFU</string>
     <string name="label_led_on">ON</string>
     <string name="label_led_blink">BLINK</string>
     <string name="label_led_off">OFF</string>
-    <string name="label_accelerometer_data_record">Record</string>
-    <string name="label_accelerometer_data_stop">Stop</string>
-    <string name="label_accelerometer_data_plot">Plot</string>
-    <string name="label_accelerometer_data_email">Email</string>
-    <string name="label_accelerometer_motion">Motion XYZ</string>
-    <string name="label_accelerometer_freefall">Free Fall</string>
-    <string name="label_accelerometer_orientation">Orientation</string>
-    <string name="label_enable_motion_data">Enable Motion Data</string>
-    <string name="label_enable_freefall_detection">Enable FreeFall Detection</string>
-    <string name="label_enable_orientation">Enable Orientation Detection</string>
     <string name="label_dfu_button">Launches the DFU activity</string>
     <string name="label_ibeacon_uuid">UUID</string>
     <string name="label_ibeacon_major">Major</string>
@@ -120,8 +109,6 @@ contact MbientLab Inc, at www.mbientlab.com.
     <string name="label_ibeacon_rx">RX Power</string>
     <string name="label_ibeacon_tx">TX Power</string>
     <string name="label_ibeacon_period">Period</string>
-    <string name="label_ibeacon_enable">Enable</string>
-    <string name="label_ibeacon_disable">Disable</string>
     <string name="label_haptic_freq">Frequency</string>
     <string name="label_led_on_intensity">On Intensity</string>
     <string name="label_led_off_intensity">Off Intensity</string>
@@ -131,22 +118,60 @@ contact MbientLab Inc, at www.mbientlab.com.
     <string name="label_led_pulse_period">Pulse Period</string>
     <string name="label_led_pulse_offset">Pulse Offset</string>
     <string name="label_led_pulse_repeat">Repeat Count</string>
+    <string name="label_led_pattern">Pattern</string>
     <string name="label_led_color_channel">Color Channel</string>
     <string name="label_led_high_intensity">High Intensity</string>
     <string name="label_led_low_intensity">Low Intensity</string>
-    <string name="label_tap_detection">Tap Detection</string>
-    <string name="label_shake_detection">Shake Detection</string>
-    <string name="label_orientation_detection">Orientation Detection</string>
-    <string name="label_movement_detection">Movement Detection</string>
-    <string name="label_movement_axes">Movement Axes</string>
-    <string name="label_data_sampling">Data Sampling</string>
-    <string name="label_enable">Enable</string>
+    <string name="label_thermister_mode">Thermistor Mode</string>
     <string name="action_start">Start</string>
     <string name="action_stop">Stop</string>
-    <string name="label_tap_type">Tap Type</string>
-    <string name="label_tap_axis">Tap Axis</string>
-    <string name="label_shake_axis">Shake Axis</string>
-    <string name="label_movement_type">Movement Type</string>
-    <string name="label_data_range">Data Range</string>
-    <string name="label_sampling_rate">Sampling Rate</string>
+    <string name="title_temp_polling">Temperature Polling</string>
+    
+    <string name="label_enable">Enable</string>
+    <string name="label_disable">Disable</string>
+    <string name="label_set">Set</string>
+    <string name="label_clear">Clear</string>
+    <string name="label_stop">Stop</string>
+    
+    <string name="label_led_write">Write</string>
+    <string name="label_led_stop_description">Stops the LED pattern</string>
+    <string name="label_led_play_description">Plays the LED pattern</string>
+    <string name="label_led_pause_description">Pauses the LED pattern</string>
+    
+    <string name="label_neopixel_strand">Strand</string>
+    <string name="label_neopixel_num_leds"># of LEDs</string>
+    <string name="label_neopixel_strand_speed">Strand Speed</string>
+    <string name="label_neopixel_color_ordering">Color Ordering</string>
+    <string name="label_neopixel_initialize">Initialize</string>
+    <string name="label_neopixel_free">Free</string>
+    <string name="label_neopixel_patterns">Patterns</string>
+    <string name="label_neopixel_direction">Direction</string>
+    <string name="label_neopixel_rotation_period">Rotation Period</string>
+    <string name="label_neopixel_rotation_period_hint">Period (ms)</string>
+    <string name="label_neopixel_rotate_start">Rotate</string>
+    
+    <string name="label_accelerometer_detection">Detection</string>
+    <string name="label_accelerometer_sampling">Sampling</string>
+    
+    <string name="label_event_program">Program</string>
+    <string name="label_event_erase">Erase</string>
+    
+    <string name="label_haptic_motor">Run Motor</string>
+    <string name="label_haptic_buzzer">Run Buzzer</string>
+    <string name="label_haptic_duty_cycle">Duty Cycle</string>
+    <string name="label_haptic_duty_cycle_hint">[0, 100] percent</string>
+    <string name="label_haptic_pulse_width">Pulse Width</string>
+    <string name="label_haptic_pulse_width_hint">[0, 65535] ms</string>
+    
+    <string name="label_gpio_pin">GPIO Pin</string>
+    <string name="label_gpio_analog_input">Analog Input</string>
+    <string name="label_gpio_abs_value">Absolute Value</string>
+    <string name="label_gpio_supply_ratio">Supply Ratio</string>
+    <string name="label_gpio_digital_input">Digital Input</string>
+    <string name="label_gpio_pull_mode">Pull Mode</string>
+    <string name="label_gpio_digital_output">Digital Output</string>
+    <string name="label_gpio_read">Read</string>
+    <string name="label_gpio_value">Value</string>
+    <string name="error_thermistor_pins">Enter valid numbers for the analog and pulldown GPIO pins</string>
+    <string name="error_connect_board">Connect to a board before using the app\'s features</string>
 </resources>

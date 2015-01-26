@@ -34,9 +34,10 @@ import com.mbientlab.metawear.api.controller.Accelerometer.Axis;
 import com.mbientlab.metawear.api.controller.Accelerometer.SamplingConfig.FullScaleRange;
 import com.mbientlab.metawear.api.controller.Accelerometer.SamplingConfig.OutputDataRate;
 import com.mbientlab.metawear.api.controller.Accelerometer.TapType;
-import com.mbientlab.metawear.app.AccelerometerFragment;
 import com.mbientlab.metawear.app.R;
+import com.mbientlab.metawear.app.AccelerometerFragment.Configuration;
 
+import android.app.Activity;
 import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
 import android.view.LayoutInflater;
@@ -52,7 +53,20 @@ import android.widget.Spinner;
  *
  */
 public class AccelerometerSettings extends DialogFragment {
-
+    private Configuration accelConfig;
+    
+    @Override
+    public void onAttach(Activity activity) {
+        super.onAttach(activity);
+        
+        if (!(activity instanceof Configuration)) {
+            throw new IllegalStateException(
+                    "Activity must implement AccelerometerFragment.Configuration interface.");
+        }
+        
+        accelConfig= (Configuration) activity;
+    }
+    
     @Override
     public View onCreateView (LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_accelerometer_settings, container);
@@ -71,13 +85,13 @@ public class AccelerometerSettings extends DialogFragment {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view,
                     int position, long id) {
-                editor.modifyTapType(position);
+                accelConfig.modifyTapType(position);
             }
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) { }
         });
-        spinnerObj.setSelection(config.tapTypePos());
+        spinnerObj.setSelection(accelConfig.tapTypePos());
         
         spinnerObj= (Spinner) view.findViewById(R.id.spinner2);
         spinnerObj.setAdapter(new ArrayAdapter<Axis>(getActivity(), 
@@ -86,13 +100,13 @@ public class AccelerometerSettings extends DialogFragment {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view,
                     int position, long id) {
-                editor.modifyTapAxis(position);
+                accelConfig.modifyTapAxis(position);
             }
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) { }
         });
-        spinnerObj.setSelection(config.tapAxisPos());
+        spinnerObj.setSelection(accelConfig.tapAxisPos());
         
         spinnerObj= (Spinner) view.findViewById(R.id.spinner3);
         spinnerObj.setAdapter(new ArrayAdapter<Axis>(getActivity(), 
@@ -101,13 +115,13 @@ public class AccelerometerSettings extends DialogFragment {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view,
                     int position, long id) {
-                editor.modifyShakeAxis(position);
+                accelConfig.modifyShakeAxis(position);
             }
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) { }
         });
-        spinnerObj.setSelection(config.shakeAxisPos());
+        spinnerObj.setSelection(accelConfig.shakeAxisPos());
         
         spinnerObj= (Spinner) view.findViewById(R.id.spinner4);
         spinnerObj.setAdapter(new ArrayAdapter<FullScaleRange>(getActivity(), 
@@ -116,13 +130,13 @@ public class AccelerometerSettings extends DialogFragment {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view,
                     int position, long id) {
-                editor.modifyDataRange(position);
+                accelConfig.modifyDataRange(position);
             }
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) { }
         });
-        spinnerObj.setSelection(config.fsrPos());
+        spinnerObj.setSelection(accelConfig.fsrPos());
         
         spinnerObj= (Spinner) view.findViewById(R.id.spinner5);
         spinnerObj.setAdapter(new ArrayAdapter<OutputDataRate>(getActivity(), 
@@ -131,13 +145,13 @@ public class AccelerometerSettings extends DialogFragment {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view,
                     int position, long id) {
-                editor.modifySamplingRate(position);
+                accelConfig.modifySamplingRate(position);
             }
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) { }
         });
-        spinnerObj.setSelection(config.odrPos());
+        spinnerObj.setSelection(accelConfig.odrPos());
         
         spinnerObj= (Spinner) view.findViewById(R.id.spinner6);
         spinnerObj.setAdapter(new ArrayAdapter<String>(getActivity(), 
@@ -146,20 +160,27 @@ public class AccelerometerSettings extends DialogFragment {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view,
                     int position, long id) {
-                editor.modifyMovementType(position);
+                accelConfig.modifyMovementType(position);
             }
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) { }
         });
-        spinnerObj.setSelection(config.movementPos());
-    }
-    
-    private AccelerometerFragment.ConfigEditor editor;
-    private AccelerometerFragment.Configuration config;
-    public void setConfigEditor(AccelerometerFragment.Configuration config, 
-            AccelerometerFragment.ConfigEditor editor) {
-        this.editor= editor;
-        this.config= config;
+        spinnerObj.setSelection(accelConfig.movementPos());
+        
+        spinnerObj= (Spinner) view.findViewById(R.id.spinner7);
+        spinnerObj.setAdapter(ArrayAdapter.createFromResource(getActivity(), R.array.firmware_version_array, 
+                android.R.layout.simple_spinner_item));
+        spinnerObj.setOnItemSelectedListener(new OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view,
+                    int position, long id) {
+                accelConfig.modifyFirmwareVersion(position);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) { }
+        });
+        spinnerObj.setSelection(accelConfig.firmwarePos());
     }
 }

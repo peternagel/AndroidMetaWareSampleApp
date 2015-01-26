@@ -53,6 +53,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
+import android.widget.Toast;
 import android.widget.AdapterView.OnItemSelectedListener;
 
 /**
@@ -188,9 +189,7 @@ public class NeoPixelFragment extends ModuleFragment {
             public void onItemSelected(AdapterView<?> parent, View view,
                     int position, long id) {
                 strand= (byte)position;
-                if (mwMnger.getCurrentController() != null && mwMnger.getCurrentController().isConnected()) {
-                    readNeoState();
-                }
+                readNeoState();
             }
 
             @Override
@@ -218,7 +217,11 @@ public class NeoPixelFragment extends ModuleFragment {
             @Override
             public void onClick(View v) {
                 resetTimer();
-                patternPresets[presetIndex].setPattern();
+                if (mwMnger.controllerReady()) {
+                    patternPresets[presetIndex].setPattern();
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
+                }
             }
         });
         
@@ -227,8 +230,12 @@ public class NeoPixelFragment extends ModuleFragment {
             @Override
             public void onClick(View v) {
                 resetTimer();
-                neoPixelController.clearStrand(strand, (byte)0, 
-                        Byte.parseByte(nLEDsText.getEditableText().toString()));
+                if (mwMnger.controllerReady()) {
+                    neoPixelController.clearStrand(strand, (byte)0, 
+                            Byte.parseByte(nLEDsText.getEditableText().toString()));
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
+                }
             }
         });
         
@@ -236,11 +243,17 @@ public class NeoPixelFragment extends ModuleFragment {
         initializeButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mwMnger.getCurrentController().isConnected()) {
-                    byte gpioPin= Byte.parseByte(gpioPinText.getEditableText().toString()), 
-                            nLEDs= Byte.parseByte(nLEDsText.getEditableText().toString());
-                    neoPixelController.initializeStrand(strand, ColorOrdering.values[orderingSpinner.getSelectedItemPosition()], 
-                            StrandSpeed.values[speedSpinner.getSelectedItemPosition()], gpioPin, nLEDs);
+                if (mwMnger.controllerReady()) {
+                    try {
+                        byte gpioPin= Byte.parseByte(gpioPinText.getEditableText().toString()), 
+                                nLEDs= Byte.parseByte(nLEDsText.getEditableText().toString());
+                        neoPixelController.initializeStrand(strand, ColorOrdering.values[orderingSpinner.getSelectedItemPosition()], 
+                                StrandSpeed.values[speedSpinner.getSelectedItemPosition()], gpioPin, nLEDs);
+                    } catch (Exception ex) {
+                        Toast.makeText(getActivity(), ex.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                    }
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
                 }
             }
         });
@@ -248,8 +261,10 @@ public class NeoPixelFragment extends ModuleFragment {
         freeButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mwMnger.getCurrentController().isConnected()) {
+                if (mwMnger.controllerReady()) {
                     neoPixelController.deinitializeStrand(strand);
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
                 }
             }
         });
@@ -274,18 +289,26 @@ public class NeoPixelFragment extends ModuleFragment {
         rotateButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                short rotationPeriod= Short.parseShort(rotationPeriodText.getEditableText().toString());
-                neoPixelController.rotateStrand(strand, RotationDirection.values[directionSpinner.getSelectedItemPosition()], 
-                        (byte)-1, rotationPeriod);
+                if (mwMnger.controllerReady()) {
+                    short rotationPeriod= Short.parseShort(rotationPeriodText.getEditableText().toString());
+                    neoPixelController.rotateStrand(strand, 
+                            RotationDirection.values[directionSpinner.getSelectedItemPosition()], 
+                            (byte)-1, rotationPeriod);
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
+                }
             }
         });
         final Button stopButton= (Button) view.findViewById(R.id.button5);
         stopButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                short rotationPeriod= Short.parseShort(rotationPeriodText.getEditableText().toString());
-                neoPixelController.rotateStrand(strand, RotationDirection.values[directionSpinner.getSelectedItemPosition()], 
-                        (byte)0, rotationPeriod);
+                if (neoPixelController != null) {
+                    short rotationPeriod= Short.parseShort(rotationPeriodText.getEditableText().toString());
+                    neoPixelController.rotateStrand(strand, 
+                            RotationDirection.values[directionSpinner.getSelectedItemPosition()], 
+                            (byte)0, rotationPeriod);
+                }
             }
         });
         

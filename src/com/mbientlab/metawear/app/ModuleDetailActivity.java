@@ -54,7 +54,10 @@ public class ModuleDetailActivity extends ModuleActivity {
 
         // Show the Up button in the action bar.
         getActionBar().setDisplayHomeAsUpEnabled(true);
-
+        
+        String id= getIntent().getStringExtra(ARG_ITEM_ID);
+        setTitle(id);
+        
         // savedInstanceState is non-null when there is fragment state
         // saved from previous configurations of this activity
         // (e.g. when rotating the screen from portrait to landscape).
@@ -67,7 +70,7 @@ public class ModuleDetailActivity extends ModuleActivity {
         if (savedInstanceState == null) {
             // Create the detail fragment and add it to the activity
             // using a fragment transaction.
-            String id= getIntent().getStringExtra(ARG_ITEM_ID);
+            
             
             if (getIntent().hasExtra(EXTRA_BLE_DEVICE)) {
                 device= getIntent().getParcelableExtra(EXTRA_BLE_DEVICE);
@@ -82,6 +85,9 @@ public class ModuleDetailActivity extends ModuleActivity {
             }
             if (fragStates.containsKey(id)) {
                 moduleFragment.setInitialSavedState(fragStates.get(id));
+            }
+            if (mwController != null) {
+                moduleFragment.controllerReady(mwController);
             }
             getSupportFragmentManager().beginTransaction()
                     .replace(R.id.module_detail_container, moduleFragment).commit();

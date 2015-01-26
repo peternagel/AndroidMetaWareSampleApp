@@ -77,9 +77,8 @@
 package no.nordicsemi.android.nrftoolbox.dfu;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.util.UUID;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -87,6 +86,7 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 
+import com.mbientlab.metawear.api.GATT;
 import com.mbientlab.metawear.app.ModuleActivity;
 import com.mbientlab.metawear.app.R;
 
@@ -95,7 +95,6 @@ import no.nordicsemi.android.nrftoolbox.dfu.adapter.FileBrowserAppsAdapter;
 import no.nordicsemi.android.nrftoolbox.dfu.fragment.UploadCancelFragment;
 import no.nordicsemi.android.nrftoolbox.dfu.settings.SettingsActivity;
 import no.nordicsemi.android.nrftoolbox.scanner.ScannerFragment;
-import no.nordicsemi.android.nrftoolbox.utility.DebugLogger;
 import no.nordicsemi.android.nrftoolbox.utility.GattError;
 import android.app.ActionBar;
 import android.app.AlertDialog;
@@ -112,7 +111,6 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
@@ -205,9 +203,7 @@ public class DfuActivity extends FragmentActivity implements LoaderCallbacks<Cur
 		setContentView(R.layout.activity_feature_dfu);
 		isBLESupported();
 		setGUI();
-
-		ensureSamplesExist();
-
+		
 		// restore saved state
 		if (savedInstanceState != null) {
 			mFilePath = savedInstanceState.getString(DATA_FILE_PATH);
@@ -292,86 +288,6 @@ public class DfuActivity extends FragmentActivity implements LoaderCallbacks<Cur
 	private void showToast(final String message) {
 		Toast.makeText(this, message, Toast.LENGTH_LONG).show();
 	}
-	
-	private void ensureSamplesExist() {
-		/*
-		 *  copy example HEX files to the external storage. 
-		 *  Files will be copied if the DFU Applications folder is missing
-		 */
-		final File folder = new File(Environment.getExternalStorageDirectory(), "Nordic Semiconductor");
-		if (!folder.exists()) {
-			folder.mkdir();
-		}
-
-		boolean oldCopied = false;
-		boolean newCopied = false;
-		File f = new File(folder, "ble_app_hrs.hex");
-		if (!f.exists()) {
-			copyRawResource(R.raw.ble_app_hrs, f);
-			oldCopied = true;
-		}
-		f = new File(folder, "ble_app_rscs.hex");
-		if (!f.exists()) {
-			copyRawResource(R.raw.ble_app_rscs, f);
-			oldCopied = true;
-		}
-		f = new File(folder, "ble_app_hrs_s110_v6_0_0.hex");
-		if (!f.exists()) {
-			copyRawResource(R.raw.ble_app_hrs_s110_v6_0_0, f);
-			newCopied = true;
-		}
-		f = new File(folder, "ble_app_rscs_s110_v6_0_0.hex");
-		if (!f.exists()) {
-			copyRawResource(R.raw.ble_app_rscs_s110_v6_0_0, f);
-			newCopied = true;
-		}
-		if (oldCopied)
-			Toast.makeText(this, R.string.dfu_example_files_created, Toast.LENGTH_LONG).show();
-		else if (newCopied)
-			Toast.makeText(this, R.string.dfu_example_new_files_created, Toast.LENGTH_LONG).show();
-
-		// Scripts
-		newCopied = false;
-		f = new File(folder, "dfu.bat");
-		if (!f.exists()) {
-			copyRawResource(R.raw.dfu_win, f);
-			newCopied = true;
-		}
-		f = new File(folder, "dfu.sh");
-		if (!f.exists()) {
-			copyRawResource(R.raw.dfu_mac, f);
-			newCopied = true;
-		}
-		if (newCopied)
-			Toast.makeText(this, R.string.dfu_scripts_created, Toast.LENGTH_LONG).show();
-	}
-
-	/**
-	 * Copies the file from res/raw with given id to given destination file. If dest does not exist it will be created.
-	 * 
-	 * @param rawResId
-	 *            the resource id
-	 * @param dest
-	 *            destination file
-	 */
-	private void copyRawResource(final int rawResId, final File dest) {
-		try {
-			final InputStream is = getResources().openRawResource(rawResId);
-			final FileOutputStream fos = new FileOutputStream(dest);
-
-			final byte[] buf = new byte[1024];
-			int read = 0;
-			try {
-				while ((read = is.read(buf)) > 0)
-					fos.write(buf, 0, read);
-			} finally {
-				is.close();
-				fos.close();
-			}
-		} catch (final IOException e) {
-			DebugLogger.e(TAG, "Error while copying HEX file " + e.toString());
-		}
-	}
 
 	@Override
 	public boolean onCreateOptionsMenu(final Menu menu) {
@@ -384,7 +300,8 @@ public class DfuActivity extends FragmentActivity implements LoaderCallbacks<Cur
 		switch (item.getItemId()) {
 		case R.id.action_connect:
             final FragmentManager fm = getSupportFragmentManager();
-            final ScannerFragment dialog = ScannerFragment.getInstance(this, null, true);
+            final ScannerFragment dialog = ScannerFragment.getInstance(this, 
+                    new UUID[] {GATT.GATTService.METAWEAR.uuid(), DfuService.DFU_SERVICE_UUID}, true);
             dialog.show(fm, "scan_fragment");
             break;
 		case android.R.id.home:
@@ -628,7 +545,8 @@ public class DfuActivity extends FragmentActivity implements LoaderCallbacks<Cur
     public void onConnectClicked(final View view) {
         if (mSelectedDevice == null) {
             final FragmentManager fm = getSupportFragmentManager();
-            final ScannerFragment dialog = ScannerFragment.getInstance(DfuActivity.this, null, true);
+            final ScannerFragment dialog = ScannerFragment.getInstance(DfuActivity.this, 
+                    new UUID[] {GATT.GATTService.METAWEAR.uuid(), DfuService.DFU_SERVICE_UUID}, true);
             dialog.show(fm, "scan_fragment");
         }
     }

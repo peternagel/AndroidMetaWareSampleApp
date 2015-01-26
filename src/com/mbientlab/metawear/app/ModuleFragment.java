@@ -47,6 +47,7 @@ public abstract class ModuleFragment extends Fragment {
     public interface MetaWearManager {
         public MetaWearController getCurrentController();
         public boolean hasController();
+        public boolean controllerReady();
     }
     
     @Override

@@ -30,12 +30,17 @@ public class HapticFragment extends ModuleFragment {
         ((Button) view.findViewById(R.id.button1)).setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
-                try {
-                    hapticController.startMotor(Float.valueOf((dutyCycle).getEditableText().toString()),
-                            Short.valueOf((pulseWidth).getEditableText().toString()));
-                } catch (NumberFormatException ex) {
-                    Toast.makeText(getActivity(), "Fill in valid values for duty cycle and pulse width", 
-                            Toast.LENGTH_SHORT).show();
+                if (mwMnger.controllerReady()) {
+                    try {
+                        hapticController.startMotor(Float.valueOf((dutyCycle).getEditableText().toString()),
+                                Short.valueOf((pulseWidth).getEditableText().toString()));
+                    } catch (NumberFormatException ex) {
+                        Toast.makeText(getActivity(), "Enter a valid pulse width and duty cycle", 
+                                Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, 
+                            Toast.LENGTH_LONG).show();
                 }
             }
         });
@@ -43,11 +48,16 @@ public class HapticFragment extends ModuleFragment {
         ((Button) view.findViewById(R.id.button2)).setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
-                try {
-                    hapticController.startBuzzer(Short.valueOf((pulseWidth).getEditableText().toString()));
-                } catch (NumberFormatException ex) {
-                    Toast.makeText(getActivity(), "Fill in valid value pulse width", 
-                            Toast.LENGTH_SHORT).show();
+                if (mwMnger.controllerReady()) {
+                    try {
+                        hapticController.startBuzzer(Short.valueOf((pulseWidth).getEditableText().toString()));
+                    } catch (NumberFormatException ex) {
+                        Toast.makeText(getActivity(), "Enter a valid pulse width", 
+                                Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, 
+                            Toast.LENGTH_LONG).show();
                 }
             }
         });

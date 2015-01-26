@@ -110,41 +110,48 @@ public class ScannerServiceParser {
 	 * For further details on parsing BLE advertisement packet data see https://developer.bluetooth.org/Pages/default.aspx Bluetooth Core Specifications Volume 3, Part C, and Section 8
 	 * </p>
 	 */
-	public static boolean decodeDeviceAdvData(byte[] data, UUID requiredUUID) {
-		final String uuid = requiredUUID != null ? requiredUUID.toString() : null;
-		if (data != null) {
-			boolean connectable = false;
-			boolean valid = uuid == null;
-			int fieldLength, fieldName;
-			int packetLength = data.length;
-			for (int index = 0; index < packetLength; index++) {
-				fieldLength = data[index];
-				if (fieldLength == 0) {
-					return connectable && valid;
-				}
-				fieldName = data[++index];
-
-				if (uuid != null) {
-					if (fieldName == SERVICES_MORE_AVAILABLE_16_BIT || fieldName == SERVICES_COMPLETE_LIST_16_BIT) {
-						for (int i = index + 1; i < index + fieldLength - 1; i += 2)
-							valid = valid || decodeService16BitUUID(uuid, data, i, 2);
-					} else if (fieldName == SERVICES_MORE_AVAILABLE_32_BIT || fieldName == SERVICES_COMPLETE_LIST_32_BIT) {
-						for (int i = index + 1; i < index + fieldLength - 1; i += 4)
-							valid = valid || decodeService32BitUUID(uuid, data, i, 4);
-					} else if (fieldName == SERVICES_MORE_AVAILABLE_128_BIT || fieldName == SERVICES_COMPLETE_LIST_128_BIT) {
-						for (int i = index + 1; i < index + fieldLength - 1; i += 16)
-							valid = valid || decodeService128BitUUID(uuid, data, i, 16);
-					}
-				}
-				if (fieldName == FLAGS_BIT) {
-					int flags = data[index + 1];
-					connectable = (flags & (LE_GENERAL_DISCOVERABLE_MODE | LE_LIMITED_DISCOVERABLE_MODE)) > 0;
-				}
-				index += fieldLength - 1;
-			}
-			return connectable && valid;
+	public static boolean decodeDeviceAdvData(byte[] data, UUID[] requiredUUIDs) {
+		for(UUID it: requiredUUIDs) {
+		    if (decodeDeviceAdvDataHelper(data, it)) return true;
 		}
 		return false;
+	}
+	
+	public static boolean decodeDeviceAdvDataHelper(byte[] data, UUID requiredUUID) {
+	    final String uuid = requiredUUID != null ? requiredUUID.toString() : null;
+        if (data != null) {
+            boolean connectable = false;
+            boolean valid = uuid == null;
+            int fieldLength, fieldName;
+            int packetLength = data.length;
+            for (int index = 0; index < packetLength; index++) {
+                fieldLength = data[index];
+                if (fieldLength == 0) {
+                    return connectable && valid;
+                }
+                fieldName = data[++index];
+
+                if (uuid != null) {
+                    if (fieldName == SERVICES_MORE_AVAILABLE_16_BIT || fieldName == SERVICES_COMPLETE_LIST_16_BIT) {
+                        for (int i = index + 1; i < index + fieldLength - 1; i += 2)
+                            valid = valid || decodeService16BitUUID(uuid, data, i, 2);
+                    } else if (fieldName == SERVICES_MORE_AVAILABLE_32_BIT || fieldName == SERVICES_COMPLETE_LIST_32_BIT) {
+                        for (int i = index + 1; i < index + fieldLength - 1; i += 4)
+                            valid = valid || decodeService32BitUUID(uuid, data, i, 4);
+                    } else if (fieldName == SERVICES_MORE_AVAILABLE_128_BIT || fieldName == SERVICES_COMPLETE_LIST_128_BIT) {
+                        for (int i = index + 1; i < index + fieldLength - 1; i += 16)
+                            valid = valid || decodeService128BitUUID(uuid, data, i, 16);
+                    }
+                }
+                if (fieldName == FLAGS_BIT) {
+                    int flags = data[index + 1];
+                    connectable = (flags & (LE_GENERAL_DISCOVERABLE_MODE | LE_LIMITED_DISCOVERABLE_MODE)) > 0;
+                }
+                index += fieldLength - 1;
+            }
+            return connectable && valid;
+        }
+        return false;
 	}
 
 	/**
