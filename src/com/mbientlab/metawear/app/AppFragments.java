@@ -51,6 +51,7 @@ public class AppFragments {
         fragments.put("Neo Pixel", NeoPixelFragment.class);
         fragments.put("Temperature", TemperatureFragment.class);
         fragments.put("Event", EventFragment.class);
+        fragments.put("Settings", SettingsFragment.class);
 
         items= fragments.keySet().toArray(new String[fragments.size()]);
     }

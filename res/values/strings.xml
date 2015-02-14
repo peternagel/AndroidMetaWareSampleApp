@@ -172,6 +172,16 @@ contact MbientLab Inc, at www.mbientlab.com.
     <string name="label_gpio_digital_output">Digital Output</string>
     <string name="label_gpio_read">Read</string>
     <string name="label_gpio_value">Value</string>
+    
+    <string name="label_settings_device_name">Device Name</string>
+    <string name="label_settings_device_name_hint">8 ASCII Chars</string>
+    <string name="label_settings_advertising_interval">Advertising Interval</string>
+    <string name="label_settings_advertising_interval_hint">[0, 65535] ms</string>
+    <string name="label_settings_advertising_timeout">Advertising Timeout</string>
+    <string name="label_settings_advertising_timeout_hint">[0, 180] s</string>
+    <string name="label_settings_tx_power">TX Power</string>
+    <string name="label_settings_tx_power_hint">4, 0, -4, -8, -12, -16, -20, -30</string>
+    
     <string name="error_thermistor_pins">Enter valid numbers for the analog and pulldown GPIO pins</string>
     <string name="error_connect_board">Connect to a board before using the app\'s features</string>
 </resources>

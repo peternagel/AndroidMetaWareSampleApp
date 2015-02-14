@@ -141,8 +141,16 @@
                     android:text="@string/dfu_action_select_file" />
                 
                 <Button
-	                android:id="@+id/action_update_latest"
+	                android:id="@+id/action_choose_version"
 	                android:layout_below="@+id/action_select_file"
+	                android:layout_width="wrap_content"
+	                android:layout_height="wrap_content"
+	                android:onClick="onChooseVersionClicked"
+	                android:text="@string/dfu_action_choose_version" />
+                
+                <Button
+	                android:id="@+id/action_update_latest"
+	                android:layout_below="@+id/action_choose_version"
 	                android:layout_width="wrap_content"
 	                android:layout_height="wrap_content"
 	                android:onClick="onUpdateLatestClicked"

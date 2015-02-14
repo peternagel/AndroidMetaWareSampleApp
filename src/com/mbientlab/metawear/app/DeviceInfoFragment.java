@@ -46,7 +46,6 @@ import com.mbientlab.metawear.api.controller.MechanicalSwitch;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -87,6 +86,14 @@ public class DeviceInfoFragment extends ModuleFragment {
                 ((TextView) getView().findViewById(R.id.remote_rssi)).setText(String.format(Locale.US, "%d ", rssi));
             }
         }
+        
+        @Override
+        public void disconnected() {
+            for(Entry<GATTCharacteristic, Integer> it: views.entrySet()) {
+                values.remove(it.getKey());
+                ((TextView) getView().findViewById(it.getValue())).setText("");
+            }
+        }
     };
     private ModuleCallbacks mCallback= new MechanicalSwitch.Callbacks() {
         @Override
@@ -117,7 +124,6 @@ public class DeviceInfoFragment extends ModuleFragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState) {
-        setHasOptionsMenu(true);
         return inflater.inflate(R.layout.fragment_device_info, container, false);
     }
     
@@ -194,19 +200,5 @@ public class DeviceInfoFragment extends ModuleFragment {
             mwController.readDeviceInformation();
             switchController.enableNotification();
         }
-    }
-    
-    @Override
-    public boolean onOptionsItemSelected (MenuItem item) {
-        switch (item.getItemId()) {
-        case R.id.ble_disconnect:
-            for(Entry<GATTCharacteristic, Integer> it: views.entrySet()) {
-                values.remove(it.getKey());
-                ((TextView) getView().findViewById(it.getValue())).setText("");
-            }
-            break;
-        }
-        
-        return super.onOptionsItemSelected(item);
     }
 }

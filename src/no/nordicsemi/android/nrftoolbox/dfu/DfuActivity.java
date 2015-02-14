@@ -78,6 +78,8 @@ package no.nordicsemi.android.nrftoolbox.dfu;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
+import java.util.ArrayList;
 import java.util.UUID;
 
 import org.apache.http.HttpEntity;
@@ -85,9 +87,13 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+import org.xmlpull.v1.XmlPullParserFactory;
 
 import com.mbientlab.metawear.api.GATT;
 import com.mbientlab.metawear.app.ModuleActivity;
+import com.mbientlab.metawear.app.popup.FirmwareVersionSelector;
 import com.mbientlab.metawear.app.R;
 
 import no.nordicsemi.android.nrftoolbox.AppHelpFragment;
@@ -132,10 +138,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 /**
- * DfuActivity is the main DFU activity It implements DFUManagerCallbacks to receive callbacks from DFUManager class It implements DeviceScannerFragment.OnDeviceSelectedListener callback to receive
+ * DfuActivity is the main DFU activity It implements DFUManagerCallbacks to receive callbacks from DFUManager class It implements 
+ * DeviceScannerFragment.OnDeviceSelectedListener callback to receive
  * callback when device is selected from scanning dialog The activity supports portrait and landscape orientations
  */
-public class DfuActivity extends FragmentActivity implements LoaderCallbacks<Cursor>, ScannerFragment.OnDeviceSelectedListener, UploadCancelFragment.CancelFragmetnListener {
+public class DfuActivity extends FragmentActivity implements LoaderCallbacks<Cursor>, ScannerFragment.OnDeviceSelectedListener, 
+        UploadCancelFragment.CancelFragmetnListener, FirmwareVersionSelector.FirmwareConfiguration {
 	private static final String TAG = "DfuActivity";
 
 	private static final String PREFS_DEVICE_NAME = "no.nordicsemi.android.nrftoolbox.dfu.PREFS_DEVICE_NAME";
@@ -164,7 +172,8 @@ public class DfuActivity extends FragmentActivity implements LoaderCallbacks<Cur
 	private TextView mTextUploading;
 	private ProgressBar mProgressBar;
 
-	private Button mSelectFileButton, mUploadButton;
+	private Button mUploadButton;
+	private Button[] firmwareButtons;
 
 	private BluetoothDevice mSelectedDevice;
 	private String mFilePath;
@@ -230,7 +239,11 @@ public class DfuActivity extends FragmentActivity implements LoaderCallbacks<Cur
 		mFileNameView = (TextView) findViewById(R.id.file_name);
 		mFileSizeView = (TextView) findViewById(R.id.file_size);
 		mFileStatusView = (TextView) findViewById(R.id.file_status);
-		mSelectFileButton = (Button) findViewById(R.id.action_select_file);
+		
+		firmwareButtons= new Button[3];
+		firmwareButtons[0]= (Button) findViewById(R.id.action_select_file);
+		firmwareButtons[1]= (Button) findViewById(R.id.action_choose_version);
+		firmwareButtons[2]= (Button) findViewById(R.id.action_update_latest);
 
 		mUploadButton = (Button) findViewById(R.id.action_upload);
 		mTextPercentage = (TextView) findViewById(R.id.textviewProgress);
@@ -504,6 +517,86 @@ public class DfuActivity extends FragmentActivity implements LoaderCallbacks<Cur
         mFileStreamUri= Uri.parse("http://releases.mbientlab.com/metawear/vanilla/latest/firmware.hex");
         new CheckFilesTask().execute(mFileStreamUri);
     }
+	
+	private String artifactPattern;
+	private String[] versions;
+	private class GetVersionsTask extends AsyncTask<URL, Integer, String[]> {
+	    @Override
+        protected String[] doInBackground(URL... params) {
+	        try {
+	            boolean inDesiredArtifact= false;
+	            String module= "metawear", build= "vanilla", artifact= "", ext= "hex", pattern= "";
+    	        XmlPullParserFactory factory= XmlPullParserFactory.newInstance();
+    	        factory.setNamespaceAware(true);
+    	        XmlPullParser xpp= factory.newPullParser();
+    	        xpp.setInput(params[0].openStream(), "UTF-8");
+    	        
+    	        ArrayList<String> versions= new ArrayList<>();
+    	        
+    	        int eventType = xpp.getEventType();
+    	        while (eventType != XmlPullParser.END_DOCUMENT) {
+    	            if(eventType == XmlPullParser.START_TAG) {
+    	                switch(xpp.getName()) {
+    	                case "publications":
+    	                    pattern= xpp.getAttributeValue(null, "artifactPattern");
+    	                    break;
+    	                case "artifact":
+    	                    inDesiredArtifact= xpp.getAttributeValue(null, "build").equals(build) && 
+    	                            xpp.getAttributeValue(null, "ext").equals(ext);
+    	                    if (inDesiredArtifact) {
+    	                        artifact= xpp.getAttributeValue(null, "name");
+    	                    }
+    	                    break;
+    	                case "release":
+    	                    if (inDesiredArtifact) {
+    	                        versions.add(xpp.getAttributeValue(null, "version"));
+    	                    }
+    	                    break;
+    	                    
+    	                }
+    	            }
+    	            eventType= xpp.next();
+    	        }
+    	        artifactPattern= pattern.replace("[module]", module)
+    	                .replace("[build]", build)
+    	                .replace("[artifact]", artifact)
+    	                .replace("[ext]", ext);
+    	        
+    	        String[] versionArray= new String[versions.size()];
+    	        versions.toArray(versionArray);
+    	        return versionArray;
+	        } catch (XmlPullParserException | IOException e) {
+	            return null;
+	        }
+	        
+	    }
+	    
+	    protected void onPostExecute(final String[] result) {
+	        if (result != null) {
+	            versions= result;
+	            
+	            final FragmentManager fm= getSupportFragmentManager();
+	            final FirmwareVersionSelector dialog= new FirmwareVersionSelector();
+	            dialog.show(fm, "firmware_version_selector");
+	        }
+	    }
+	}
+
+    @Override
+    public void versionSelected(int index) {
+        mFileStreamUri= Uri.parse(String.format("http://releases.mbientlab.com/%s", artifactPattern.replace("[version]", versions[index])));
+        new CheckFilesTask().execute(mFileStreamUri);
+    }
+
+    @Override
+    public String[] availableVersions() {
+        return versions;
+    }
+    
+	public void onChooseVersionClicked(final View view) throws XmlPullParserException, IOException {
+	    URL modulesXml= new URL("http://releases.mbientlab.com/metawear/module.xml");
+	    new GetVersionsTask().execute(modulesXml);
+	}
 
 	/**
 	 * Callback of UPDATE/CANCEL button on DfuActivity
@@ -566,7 +659,11 @@ public class DfuActivity extends FragmentActivity implements LoaderCallbacks<Cur
 		mProgressBar.setVisibility(View.VISIBLE);
 		mTextPercentage.setVisibility(View.VISIBLE);
 		mTextUploading.setVisibility(View.VISIBLE);
-		mSelectFileButton.setEnabled(false);
+		
+		for(Button button: firmwareButtons) {
+		    button.setEnabled(false);
+		}
+		    
 		mUploadButton.setEnabled(true);
 		mUploadButton.setText(R.string.dfu_action_upload_cancel);
 	}
@@ -635,7 +732,11 @@ public class DfuActivity extends FragmentActivity implements LoaderCallbacks<Cur
 		mProgressBar.setVisibility(View.INVISIBLE);
 		mTextPercentage.setVisibility(View.INVISIBLE);
 		mTextUploading.setVisibility(View.INVISIBLE);
-		mSelectFileButton.setEnabled(true);
+		
+		for(Button button: firmwareButtons) {
+            button.setEnabled(true);
+        }
+		
 		mUploadButton.setEnabled(false);
 		mDeviceNameView.setText(R.string.dfu_default_name);
 		mUploadButton.setText(R.string.dfu_action_upload);
