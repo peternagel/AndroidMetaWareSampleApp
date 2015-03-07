@@ -52,6 +52,7 @@ public class AppFragments {
         fragments.put("Temperature", TemperatureFragment.class);
         fragments.put("Event", EventFragment.class);
         fragments.put("Settings", SettingsFragment.class);
+        fragments.put("Logging", LoggingFragment.class);
 
         items= fragments.keySet().toArray(new String[fragments.size()]);
     }
