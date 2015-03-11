@@ -46,11 +46,14 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.AdapterView.OnItemSelectedListener;
+import android.widget.CompoundButton.OnCheckedChangeListener;
 
 /**
  * @author etsai
@@ -60,25 +63,47 @@ public class GPIOFragment extends ModuleFragment {
     private EditText pinText;
     private GPIO gpioController;
     private PullMode pullMode;
+    private boolean olderFirmware;
     
     private ModuleCallbacks mCallbacks= new GPIO.Callbacks() {
         @Override
         public void receivedAnalogInputAsAbsValue(short value) {
-            if (isVisible()) {
+            if (olderFirmware && isVisible()) {
                 ((TextView) getView().findViewById(R.id.textView4)).setText(String.format(Locale.US, "%d mV", value));
             }
         }
 
         @Override
         public void receivedAnalogInputAsSupplyRatio(short value) {
-            if (isVisible()) {
+            if (olderFirmware && isVisible()) {
                 ((TextView) getView().findViewById(R.id.textView5)).setText(String.format(Locale.US, "%d", value));
             }
         }
 
         @Override
         public void receivedDigitalInput(byte value) {
-            if (isVisible()) {
+            if (olderFirmware && isVisible()) {
+                ((TextView) getView().findViewById(R.id.textView8)).setText(String.format(Locale.US, "%d", value));
+            }
+        }
+        
+        @Override
+        public void receivedAnalogInputAsAbsValue(byte pin, short value) {
+            if (!olderFirmware && isVisible()) {
+                ((TextView) getView().findViewById(R.id.textView4)).setText(String.format(Locale.US, "%d mV", value));
+            }
+        }
+
+        @Override
+        public void receivedAnalogInputAsSupplyRatio(byte pin, short value) {
+            if (!olderFirmware && isVisible()) {
+                ((TextView) getView().findViewById(R.id.textView5)).setText(String.format(Locale.US, "%d", value));
+            }
+        }
+
+        @Override
+        public void receivedDigitalInput(byte pin, byte value) {
+            if (!olderFirmware && isVisible()) {
                 ((TextView) getView().findViewById(R.id.textView8)).setText(String.format(Locale.US, "%d", value));
             }
         }
@@ -104,6 +129,14 @@ public class GPIOFragment extends ModuleFragment {
         });
         pullModeSpinner.setAdapter(new ArrayAdapter<PullMode>(getActivity(), 
                 R.layout.command_row, R.id.command_name, PullMode.values));
+        
+        ((CheckBox) view.findViewById(R.id.checkBox1)).setOnCheckedChangeListener(new OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView,
+                    boolean isChecked) {
+                olderFirmware= isChecked;
+            }
+        });
         
         ((Button) view.findViewById(R.id.button1)).setOnClickListener(new Button.OnClickListener() {
             @Override

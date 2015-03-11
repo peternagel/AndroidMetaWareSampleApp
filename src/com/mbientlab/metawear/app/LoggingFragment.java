@@ -38,8 +38,10 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Locale;
 
+import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.content.FileProvider;
@@ -52,6 +54,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.AdapterView.OnItemSelectedListener;
+import android.widget.TextView;
 
 import com.mbientlab.metawear.api.MetaWearController;
 import com.mbientlab.metawear.api.Module;
@@ -79,6 +82,7 @@ public class LoggingFragment extends ModuleFragment {
         private boolean ready;
         protected LogEntry firstEntry;
         
+        public abstract String getDescription();
         public abstract void stopSensors();
         public abstract File[] saveDataToFile();
         public abstract void processData(double offset, LogEntry entry);
@@ -164,6 +168,11 @@ public class LoggingFragment extends ModuleFragment {
         }
         
         @Override
+        public String getDescription() {
+            return String.format(Locale.US, "Logs ADC value of GPIO pin %d every 500ms.  %s", 
+                    gpioPin, "You will need firmware 1.0.0 or higher to log GPIO data");
+        }
+        @Override
         public void receivedTriggerId(byte triggerId) {
             super.receivedTriggerId(triggerId);
             timerController.startTimer(myTimerId);
@@ -243,6 +252,11 @@ public class LoggingFragment extends ModuleFragment {
                 private final String CSV_HEADER_XY= "time,x-Axis,y-Axis", CSV_HEADER_Z= "time,z-Axis";
                   
                 @Override
+                public String getDescription() {
+                    return "Logs the accelerometer axis data sampling at 50Hz";
+                }
+                
+                @Override
                 public String toString() { return "Accelerometer"; }
                 
                 @Override
@@ -266,7 +280,7 @@ public class LoggingFragment extends ModuleFragment {
                     loggingController.addTrigger(LoggingTrigger.ACCELEROMETER_Z_AXIS);
                     
                     accelController.enableXYZSampling().withFullScaleRange(FullScaleRange.FSR_8G)
-                        .withOutputDataRate(OutputDataRate.ODR_100_HZ)
+                        .withOutputDataRate(OutputDataRate.ODR_50_HZ)
                         .withSilentMode();
                     accelController.startComponents();
                 }
@@ -328,7 +342,13 @@ public class LoggingFragment extends ModuleFragment {
                 
                 private ArrayList<double[]> tempData;
                 private final String CSV_HEADER_TEMP= "time,temperature";
-                  
+                
+                @Override
+                public String getDescription() {
+                    return String.format(Locale.US, "%s.  %s","Logs the temperature value every 500ms",
+                            "You can use the temperature panel to enable/disable thermistor mode");
+                }
+                
                 @Override
                 public String toString() { return "Temperature"; }
                 
@@ -389,9 +409,19 @@ public class LoggingFragment extends ModuleFragment {
      */
     @Override
     public void controllerReady(MetaWearController mwController) {
-        
-        
         loggingController= (Logging) mwController.getModuleController(Module.LOGGING);
+    }
+
+    @Override
+    public void onAttach(Activity activity) {
+        activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LOCKED);
+        super.onAttach(activity);
+    }
+    
+    @Override
+    public void onPause() {
+        getActivity().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR);
+        super.onPause();
     }
 
     @Override
@@ -402,7 +432,7 @@ public class LoggingFragment extends ModuleFragment {
     }
     
     @Override
-    public void onViewCreated(View view, Bundle savedInstanceState) {
+    public void onViewCreated(final View view, Bundle savedInstanceState) {
         Spinner spinnerObj;
         
         spinnerObj= (Spinner) view.findViewById(R.id.spinner1);
@@ -410,9 +440,11 @@ public class LoggingFragment extends ModuleFragment {
                 R.layout.command_row, R.id.command_name, sensors));
         spinnerObj.setOnItemSelectedListener(new OnItemSelectedListener() {
             @Override
-            public void onItemSelected(AdapterView<?> parent, View view,
+            public void onItemSelected(AdapterView<?> parent, View innerView,
                     int position, long id) {
                 sensorIndex= position;
+                TextView description= (TextView) view.findViewById(R.id.textView2);
+                description.setText(sensors[sensorIndex].getDescription());
             }
 
             @Override
