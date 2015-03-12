@@ -31,7 +31,6 @@
 package com.mbientlab.metawear.app;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -53,6 +52,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Spinner;
+import android.widget.Toast;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.TextView;
 
@@ -84,7 +84,7 @@ public class LoggingFragment extends ModuleFragment {
         
         public abstract String getDescription();
         public abstract void stopSensors();
-        public abstract File[] saveDataToFile();
+        public abstract File[] saveDataToFile() throws IOException;
         public abstract void processData(double offset, LogEntry entry);
         
         public void setupLogger() {
@@ -161,7 +161,8 @@ public class LoggingFragment extends ModuleFragment {
         
         private ArrayList<GPIOLogData> gpioData;
         private final String CSV_HEADER_ADC= "time,adc";
-        private byte myTimerId= -1, gpioPin;
+        private byte myTimerId= -1, commandId= -1;
+        private final byte gpioPin;
 
         public GPIOSensor(byte gpioPin) {
             this.gpioPin= gpioPin;
@@ -184,6 +185,7 @@ public class LoggingFragment extends ModuleFragment {
         @Override
         public void stopSensors() {
             timerController.removeTimer(myTimerId);
+            eventController.removeCommand(commandId);
         }
         
         @Override
@@ -209,6 +211,12 @@ public class LoggingFragment extends ModuleFragment {
                     
                     mwController.removeModuleCallback(this);
                 }
+            }).addModuleCallback(new Event.Callbacks() {
+                @Override
+                public void receivedCommandId(byte id) {
+                    commandId= id;
+                    mwController.removeModuleCallback(this);
+                }
             });
             
             timerController.addTimer(500, (short) 0, false);
@@ -220,24 +228,16 @@ public class LoggingFragment extends ModuleFragment {
         }
         
         @Override
-        public File[] saveDataToFile() {
+        public File[] saveDataToFile() throws IOException {
             File tempFile= LoggingFragment.this.getActivity().getFileStreamPath("GPIO_Pin0_ADC_Data.csv");
             File[] dataFiles= new File[] {tempFile};
             
-            try {
-                FileOutputStream fos= new FileOutputStream(tempFile);
-                fos.write(String.format("%s%n", CSV_HEADER_ADC).getBytes());
-                for(GPIOLogData it: gpioData) {
-                    fos.write(String.format(Locale.US, "%.3f,%d%n", it.time, it.adc).getBytes());
-                }
-                fos.close();
-            } catch (FileNotFoundException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
+            FileOutputStream fos= new FileOutputStream(tempFile);
+            fos.write(String.format("%s%n", CSV_HEADER_ADC).getBytes());
+            for(GPIOLogData it: gpioData) {
+                fos.write(String.format(Locale.US, "%.3f,%d%n", it.time, it.adc).getBytes());
             }
+            fos.close();
             
             return dataFiles;
         }
@@ -280,7 +280,7 @@ public class LoggingFragment extends ModuleFragment {
                     loggingController.addTrigger(LoggingTrigger.ACCELEROMETER_Z_AXIS);
                     
                     accelController.enableXYZSampling().withFullScaleRange(FullScaleRange.FSR_8G)
-                        .withOutputDataRate(OutputDataRate.ODR_50_HZ)
+                        .withOutputDataRate(OutputDataRate.ODR_800_HZ)
                         .withSilentMode();
                     accelController.startComponents();
                 }
@@ -307,32 +307,24 @@ public class LoggingFragment extends ModuleFragment {
                 }
                 
                 @Override
-                public File[] saveDataToFile() {
+                public File[] saveDataToFile() throws IOException {
                     File xyFile= LoggingFragment.this.getActivity().getFileStreamPath("Accelerometer_xy_data.csv"),
                             zFile= LoggingFragment.this.getActivity().getFileStreamPath("Accelerometer_z_data.csv");
                     File[] dataFiles= new File[] {xyFile, zFile};
                     
-                    try {
-                        FileOutputStream fos= new FileOutputStream(xyFile);
-                        fos.write(String.format("%s%n", CSV_HEADER_XY).getBytes());
-                        for(double[] it: xyData) {
-                            fos.write(String.format(Locale.US, "%.3f,%.3f,%.3f%n", it[0], it[1], it[2]).getBytes());
-                        }
-                        fos.close();
-                        
-                        fos= new FileOutputStream(zFile);
-                        fos.write(String.format("%s%n", CSV_HEADER_Z).getBytes());
-                        for(double[] it: zData) {
-                            fos.write(String.format(Locale.US, "%.3f,%.3f%n", it[0], it[1]).getBytes());
-                        }
-                        fos.close();
-                    } catch (FileNotFoundException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    } catch (IOException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
+                    FileOutputStream fos= new FileOutputStream(xyFile);
+                    fos.write(String.format("%s%n", CSV_HEADER_XY).getBytes());
+                    for(double[] it: xyData) {
+                        fos.write(String.format(Locale.US, "%.3f,%.3f,%.3f%n", it[0], it[1], it[2]).getBytes());
                     }
+                    fos.close();
+                    
+                    fos= new FileOutputStream(zFile);
+                    fos.write(String.format("%s%n", CSV_HEADER_Z).getBytes());
+                    for(double[] it: zData) {
+                        fos.write(String.format(Locale.US, "%.3f,%.3f%n", it[0], it[1]).getBytes());
+                    }
+                    fos.close();
                     
                     return dataFiles;
                 }
@@ -366,7 +358,7 @@ public class LoggingFragment extends ModuleFragment {
                     tempData= new ArrayList<>();
 
                     loggingController.addTrigger(LoggingTrigger.TEMPERATURE);
-                    tempController.enableSampling().withSampingPeriod(500).withSilentMode().commit();
+                    tempController.enableSampling().withSamplingPeriod(500).withSilentMode().commit();
                 }
                 
                 @Override
@@ -375,24 +367,16 @@ public class LoggingFragment extends ModuleFragment {
                 }
                 
                 @Override
-                public File[] saveDataToFile() {
+                public File[] saveDataToFile() throws IOException {
                     File tempFile= LoggingFragment.this.getActivity().getFileStreamPath("Temperature_Data.csv");
                     File[] dataFiles= new File[] {tempFile};
                     
-                    try {
-                        FileOutputStream fos= new FileOutputStream(tempFile);
-                        fos.write(String.format("%s%n", CSV_HEADER_TEMP).getBytes());
-                        for(double[] it: tempData) {
-                            fos.write(String.format(Locale.US, "%.3f,%.3f%n", it[0], it[1]).getBytes());
-                        }
-                        fos.close();
-                    } catch (FileNotFoundException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    } catch (IOException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
+                    FileOutputStream fos= new FileOutputStream(tempFile);
+                    fos.write(String.format("%s%n", CSV_HEADER_TEMP).getBytes());
+                    for(double[] it: tempData) {
+                        fos.write(String.format(Locale.US, "%.3f,%.3f%n", it[0], it[1]).getBytes());
                     }
+                    fos.close();
                     
                     return dataFiles;
                 }
@@ -454,43 +438,56 @@ public class LoggingFragment extends ModuleFragment {
         ((Button) view.findViewById(R.id.button1)).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                mwMnger.getCurrentController().addModuleCallback(sensors[sensorIndex]);
-                sensors[sensorIndex].setupLogger();
+                if (mwMnger.controllerReady()) {
+                    mwMnger.getCurrentController().addModuleCallback(sensors[sensorIndex]);
+                    sensors[sensorIndex].setupLogger();
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
+                }
             }
         });
         
         ((Button) view.findViewById(R.id.button2)).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                sensors[sensorIndex].stopSensors();
+                if (mwMnger.controllerReady()) {
+                    sensors[sensorIndex].stopSensors();
                 
-                if (sensors[sensorIndex].dataReady()) {
-                    startEmailIntent();
+                    if (sensors[sensorIndex].dataReady()) {
+                        startEmailIntent();
+                    } else {
+                        loggingController.stopLogging();
+                        loggingController.readTotalEntryCount();
+                    }
                 } else {
-                    loggingController.stopLogging();
-                    loggingController.readTotalEntryCount();
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
                 }
             }
         });
     }
-
+    
     private void startEmailIntent() {
         mwMnger.getCurrentController().removeModuleCallback(sensors[sensorIndex]);
         
         ArrayList<Uri> fileUris= new ArrayList<>();
         
-        for(File it: sensors[sensorIndex].saveDataToFile()) {
-            fileUris.add(FileProvider.getUriForFile(getActivity(), 
-                    "com.mbientlab.metawear.app.fileprovider", it));
+        try {
+            for(File it: sensors[sensorIndex].saveDataToFile()) {
+                fileUris.add(FileProvider.getUriForFile(getActivity(), 
+                        "com.mbientlab.metawear.app.fileprovider", it));
+            }
+            
+            Intent intent = new Intent(Intent.ACTION_SEND_MULTIPLE);
+            intent.setType("text/plain");
+            intent.putExtra(Intent.EXTRA_SUBJECT, String.format(Locale.US, 
+                    "Logged %s data - %tY-%<tm-%<tdT%<tH-%<tM-%<tS", sensors[sensorIndex].toString(), 
+                    Calendar.getInstance().getTime()));
+            
+            intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, fileUris);
+            startActivity(Intent.createChooser(intent, "Send email..."));
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         }
-        
-        Intent intent = new Intent(Intent.ACTION_SEND_MULTIPLE);
-        intent.setType("text/plain");
-        intent.putExtra(Intent.EXTRA_SUBJECT, String.format(Locale.US, 
-                "Logged %s data - %tY-%<tm-%<tdT%<tH-%<tM-%<tS", sensors[sensorIndex].toString(), 
-                Calendar.getInstance().getTime()));
-        
-        intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, fileUris);
-        startActivity(Intent.createChooser(intent, "Send email..."));
     }
 }

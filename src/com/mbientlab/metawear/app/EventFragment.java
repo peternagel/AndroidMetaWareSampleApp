@@ -336,7 +336,7 @@ public class EventFragment extends ModuleFragment {
                 eventController.stopRecord();
                 
                 Temperature tempController= (Temperature) mwMnger.getCurrentController().getModuleController(Module.TEMPERATURE);
-                tempController.enableSampling().withSampingPeriod(500)
+                tempController.enableSampling().withSamplingPeriod(500)
                     .withTemperatureDelta(2).commit();
             }
             

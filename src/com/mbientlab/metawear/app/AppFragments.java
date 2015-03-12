@@ -30,18 +30,18 @@
  */
 package com.mbientlab.metawear.app;
 
-import java.util.HashMap;
+import java.util.TreeMap;
 
 /**
  * @author etsai
  *
  */
 public class AppFragments {
-    private static final HashMap<String, Class<? extends ModuleFragment>> fragments;
+    private static final TreeMap<String, Class<? extends ModuleFragment>> fragments;
     private static final String[] items;
     
     static {
-        fragments= new HashMap<>();
+        fragments= new TreeMap<>();
         fragments.put("Device Information", DeviceInfoFragment.class);
         fragments.put("LED", LEDFragment.class);
         fragments.put("Accelerometer", AccelerometerFragment.class);

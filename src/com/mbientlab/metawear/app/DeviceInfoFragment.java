@@ -145,6 +145,7 @@ public class DeviceInfoFragment extends ModuleFragment {
             public void onClick(View v) {
                 if (mwMnger.controllerReady()) {
                     debugController.resetDevice();
+                    Toast.makeText(getActivity(), R.string.text_reset, Toast.LENGTH_LONG).show();
                 } else {
                     Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
                 }

@@ -66,27 +66,6 @@ contact MbientLab Inc, at www.mbientlab.com.
 	        </EditText>
 	    </LinearLayout>
 	
-	    <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:weightSum="2" >
-    
-            <TextView
-                android:id="@+id/textView12"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1.50"
-                android:text="@string/label_firmware_version" />
-
-            <CheckBox
-                android:id="@+id/checkBox1"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.50"
-                android:text="@string/label_gpio_firmware" />
-            
-        </LinearLayout>
-        
 	    <View
 	        android:layout_width="fill_parent"
 	        android:layout_height="1dp"

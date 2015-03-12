@@ -55,6 +55,7 @@ contact MbientLab Inc, at www.mbientlab.com.
     
     <string name="text_connected">Device Connected</string>
     <string name="text_lost_connection">Connection Lost</string>
+    <string name="text_reset">Reset Issued</string>
     
     <string name="mw_about_text">The MetaWear app provides a GUI for interacting with a MetaWear board and serves as an example on how to use the MetaWear API.</string>
 
@@ -141,7 +142,8 @@ contact MbientLab Inc, at www.mbientlab.com.
     <string name="label_log_start">Log</string>
     <string name="label_log_save">Save</string>
     <string name="label_log_help">Select a sensor you wish to log.  Press the Log button to begin logging and the Save button to download and email the data.  
-        For the best results, your device should be on Android 4.4 or higher.  The screen\'s orientation will be locked while the panel is active.</string>
+        For the best results, your device should be on Android 4.4 or higher and you should disconnect after each log download.  
+        The screen\'s orientation will be locked while the panel is active.</string>
     
     <string name="label_neopixel_strand">Strand</string>
     <string name="label_neopixel_num_leds"># of LEDs</string>
