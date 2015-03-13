@@ -121,7 +121,7 @@ public class TemperatureFragment extends ModuleFragment {
                 if (mwMnger.controllerReady()) {
                     try {
                         tempController.enableSampling()
-                                .withSampingPeriod(Integer.parseInt(tempPolling.getEditableText().toString()))
+                                .withSamplingPeriod(Integer.parseInt(tempPolling.getEditableText().toString()))
                                 .withTemperatureDelta(Float.parseFloat(tempDelta.getEditableText().toString()))
                                 .withTemperatureBoundary(Float.parseFloat(tempLower.getEditableText().toString()), 
                                         Float.parseFloat(tempUpper.getEditableText().toString()))

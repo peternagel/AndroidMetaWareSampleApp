@@ -8,8 +8,8 @@
 /*
  * NORDIC SEMICONDUTOR EXAMPLE CODE AND LICENSE AGREEMENT
  *
- * You are receiving this document because you have obtained example code (“Software”) 
- * from Nordic Semiconductor ASA * (“Licensor”). The Software is protected by copyright 
+ * You are receiving this document because you have obtained example code ("Software") 
+ * from Nordic Semiconductor ASA * ("Licensor"). The Software is protected by copyright 
  * laws and international treaties. All intellectual property rights related to the 
  * Software is the property of the Licensor. This document is a license agreement governing 
  * your rights and obligations regarding usage of the Software. Any variation to the terms 
@@ -34,7 +34,7 @@
  * You are not allowed to remove, alter or destroy any proprietary, 
  * trademark or copyright markings or notices placed upon or contained with the Software.
  *     
- * You shall not use Licensor’s name or trademarks without Licensor’s prior consent.
+ * You shall not use Licensor's name or trademarks without Licensor's prior consent.
  * 
  * == Disclaimer of warranties and limitation of liability ==
  * 
