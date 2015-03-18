@@ -9,7 +9,7 @@ android {
         minSdkVersion 18
         targetSdkVersion 21
         versionCode 8
-        versionName "2.5.8"
+        versionName "2.5.9"
     }
 
     buildTypes {
@@ -26,7 +26,7 @@ android {
 
 dependencies {
     compile 'com.android.support:support-v4:21.0.3'
-    compile 'com.mbientlab:metawear:1.6.0'
+    compile 'com.mbientlab:metawear:1.6.21'
     compile 'com.jjoe64:graphview:4.0.0'
     compile files('libs/nrf-logger-v1.2.jar')
 }

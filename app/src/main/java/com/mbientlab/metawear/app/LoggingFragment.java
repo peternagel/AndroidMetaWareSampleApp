@@ -260,7 +260,7 @@ public class LoggingFragment extends ModuleFragment {
                   
                 @Override
                 public String getDescription() {
-                    return "Logs the accelerometer axis data sampling at 100Hz";
+                    return "Logs the accelerometer axis data sampling at 50Hz";
                 }
                 
                 @Override
@@ -289,7 +289,7 @@ public class LoggingFragment extends ModuleFragment {
                     loggingController.addTrigger(LoggingTrigger.ACCELEROMETER_Z_AXIS);
                     
                     accelController.enableXYZSampling().withFullScaleRange(FullScaleRange.FSR_8G)
-                        .withOutputDataRate(OutputDataRate.ODR_100_HZ)
+                        .withOutputDataRate(OutputDataRate.ODR_50_HZ)
                         .withSilentMode();
                     accelController.startComponents();
                 }
