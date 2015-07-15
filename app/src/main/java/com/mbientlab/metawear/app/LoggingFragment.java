@@ -160,9 +160,6 @@ public class LoggingFragment extends ModuleFragment {
             public final short adc;
         }
 
-        private Event eventController;
-        private Timer timerController;
-        
         private ArrayList<GPIOLogData> gpioData;
         private final String CSV_HEADER_ADC= "time,adc";
         private byte myTimerId= -1, commandId= -1;
@@ -180,7 +177,7 @@ public class LoggingFragment extends ModuleFragment {
         @Override
         public void receivedTriggerId(byte triggerId) {
             super.receivedTriggerId(triggerId);
-            timerController.startTimer(myTimerId);
+            ((Timer) mwMnger.getCurrentController().getModuleController(Module.TIMER)).startTimer(myTimerId);
         }
         
         @Override
@@ -532,7 +529,7 @@ public class LoggingFragment extends ModuleFragment {
         Spinner spinnerObj;
         
         spinnerObj= (Spinner) view.findViewById(R.id.spinner1);
-        spinnerObj.setAdapter(new ArrayAdapter<Sensor>(getActivity(), 
+        spinnerObj.setAdapter(new ArrayAdapter<>(getActivity(),
                 R.layout.command_row, R.id.command_name, sensors));
         spinnerObj.setOnItemSelectedListener(new OnItemSelectedListener() {
             @Override
@@ -547,7 +544,7 @@ public class LoggingFragment extends ModuleFragment {
             public void onNothingSelected(AdapterView<?> parent) { }
         });
         
-        ((Button) view.findViewById(R.id.button1)).setOnClickListener(new OnClickListener() {
+        view.findViewById(R.id.button1).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (mwMnger.controllerReady()) {
@@ -559,7 +556,7 @@ public class LoggingFragment extends ModuleFragment {
             }
         });
         
-        ((Button) view.findViewById(R.id.button2)).setOnClickListener(new OnClickListener() {
+        view.findViewById(R.id.button2).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (mwMnger.controllerReady()) {
