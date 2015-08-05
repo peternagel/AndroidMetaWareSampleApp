@@ -17,8 +17,8 @@ public class FirmwareVersionSelector extends DialogFragment {
     private FirmwareConfiguration config;
     
     public interface FirmwareConfiguration {
-        public void versionSelected(int index);
-        public String[] availableVersions();
+        void versionSelected(int index);
+        String[] availableVersions();
     }
     
     @Override

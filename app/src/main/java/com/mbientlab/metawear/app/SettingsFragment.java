@@ -35,15 +35,14 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import com.mbientlab.metawear.api.MetaWearController;
-import com.mbientlab.metawear.api.Module;
-import com.mbientlab.metawear.api.MetaWearController.DeviceCallbacks;
-import com.mbientlab.metawear.api.controller.Macro;
-import com.mbientlab.metawear.api.controller.Settings;
+import com.mbientlab.metawear.AsyncOperation;
+import com.mbientlab.metawear.MetaWearBoard;
+import com.mbientlab.metawear.UnsupportedModuleException;
+import com.mbientlab.metawear.module.Macro;
+import com.mbientlab.metawear.module.Settings;
 
 /**
  * @author etsai
@@ -53,68 +52,11 @@ public class SettingsFragment extends ModuleFragment {
     private final String KEY_DEVICE_NAME= "DEVICE_NAME", KEY_AD_INTERVAL= "AD_INTERVAL", 
             KEY_AD_TIMEOUT= "AD_TIMEOUT", KEY_TX_POWER= "TX_POWER";
     
-    private final Object lock= new Object();
-    private boolean macroReady, readSettings= true;
-    
     private Macro macroController;
     private Settings settingsController;
     private EditText deviceName, adInterval, adTimeout, txPower;
-    
-    private final DeviceCallbacks dCallback= new MetaWearController.DeviceCallbacks() {
-        @Override
-        public void connected() {
-            settingsController.readDeviceName();
-            settingsController.readAdvertisingParams();
-            settingsController.readTxPower();
-        }
-        
-        @Override
-        public void disconnected() {
-            deviceName.setText("");
-            adInterval.setText("");
-            adTimeout.setText("");
-            txPower.setText("");
-        }
-    };
-    private final Settings.Callbacks settingsCallbackFns= new Settings.Callbacks() {
-        @Override
-        public void receivedDeviceName(String name) {
-            if (isVisible()) {
-                ((EditText) getView().findViewById(R.id.editText1)).setText(name);
-            }
-        }
+    private MetaWearBoard currBoard;
 
-        @Override
-        public void receivedAdvertisementParams(int interval, short timeout) {
-            if (isVisible()) {
-                ((EditText) getView().findViewById(R.id.editText2)).setText(String.format("%d", interval));
-                ((EditText) getView().findViewById(R.id.editText4)).setText(String.format("%d", timeout));
-            }
-        }
-
-        @Override
-        public void receivedTXPower(byte power) {
-            if (isVisible()) {
-                ((EditText) getView().findViewById(R.id.editText3)).setText(String.format("%d", power));
-            }
-        }
-    };
-    private final Macro.Callbacks macroCallbackFns= new Macro.Callbacks() {
-        @Override
-        public void receivedMacroId(byte id) {
-            try {
-                synchronized(lock) {
-                    while(!macroReady) {
-                        lock.wait();
-                    }
-                    macroController.executeMacro(id);
-                }
-            } catch (final InterruptedException e) {
-                Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
-            }
-        }
-    };
-    
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState) {
@@ -129,32 +71,29 @@ public class SettingsFragment extends ModuleFragment {
         txPower= (EditText) view.findViewById(R.id.editText3);
         
         if (savedInstanceState != null) {
-            readSettings= false;
             deviceName.setText(savedInstanceState.getString(KEY_DEVICE_NAME));
             adInterval.setText(savedInstanceState.getString(KEY_AD_INTERVAL));
             adTimeout.setText(savedInstanceState.getString(KEY_AD_TIMEOUT));
             txPower.setText(savedInstanceState.getString(KEY_TX_POWER));
         }
         
-        ((Button) view.findViewById(R.id.button1)).setOnClickListener(new OnClickListener() {
+        view.findViewById(R.id.button1).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mwMnger.controllerReady()) {
+                if (currBoard != null && currBoard.isConnected()) {
                     try {
-                        int interval= Integer.valueOf(adInterval.getEditableText().toString());
-                        short timeout= Short.valueOf(adTimeout.getEditableText().toString());
-                
-                        macroReady= false;
-                        macroController.recordMacro(true);
-                        settingsController.setDeviceName(deviceName.getEditableText().toString());
-                        settingsController.setAdvertisingInterval((short) (interval & 0xffff), (byte) (timeout & 0xff));
-                        settingsController.setTXPower(Byte.valueOf(txPower.getEditableText().toString()));
-                        macroController.stopRecord();
-                        macroReady= true;
-                    
-                        synchronized(lock) {
-                            lock.notifyAll();
-                        }
+                        final int interval = Integer.valueOf(adInterval.getEditableText().toString());
+                        final short timeout = Short.valueOf(adTimeout.getEditableText().toString());
+
+                        macroController.record(new Macro.CodeBlock() {
+                            @Override
+                            public void commands() {
+                                settingsController.configure().setDeviceName(deviceName.getEditableText().toString())
+                                        .setAdInterval((short) (interval & 0xffff), (byte) (timeout & 0xff))
+                                        .setTxPower(Byte.valueOf(txPower.getEditableText().toString()))
+                                        .commit();
+                            }
+                        });
                     } catch (Exception ex) {
                         Toast.makeText(getActivity(), ex.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
                     }
@@ -164,42 +103,16 @@ public class SettingsFragment extends ModuleFragment {
             }
         });
         
-        ((Button) view.findViewById(R.id.button2)).setOnClickListener(new OnClickListener() {
+        view.findViewById(R.id.button2).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mwMnger.controllerReady()) {
+                if (currBoard != null && currBoard.isConnected()) {
                     macroController.eraseMacros();
                 } else {
                     Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
                 }
             }
         });
-    }
-    
-    @Override
-    public void onDestroy() {
-        final MetaWearController mwController= mwMnger.getCurrentController();
-        if (mwMnger.hasController()) {
-            mwController.removeDeviceCallback(dCallback);
-            mwController.removeModuleCallback(settingsCallbackFns);
-            mwController.removeModuleCallback(macroCallbackFns);
-        }
-        
-        super.onDestroy();
-    }
-    
-    /* (non-Javadoc)
-     * @see com.mbientlab.metawear.app.ModuleFragment#controllerReady(com.mbientlab.metawear.api.MetaWearController)
-     */
-    @Override
-    public void controllerReady(MetaWearController mwController) {
-        settingsController= (Settings) mwController.getModuleController(Module.SETTINGS);
-        macroController= (Macro) mwController.getModuleController(Module.MACRO);
-        mwController.addDeviceCallback(dCallback).addModuleCallback(settingsCallbackFns).addModuleCallback(macroCallbackFns);
-        
-        if (readSettings && mwController.isConnected()) {
-            dCallback.connected();
-        }
     }
 
     @Override
@@ -210,5 +123,36 @@ public class SettingsFragment extends ModuleFragment {
         outState.putString(KEY_AD_INTERVAL, adInterval.getEditableText().toString());
         outState.putString(KEY_AD_TIMEOUT, adTimeout.getEditableText().toString());
         outState.putString(KEY_TX_POWER, txPower.getEditableText().toString());
+    }
+
+    private void readSettingsConfig() {
+        settingsController.readAdConfig().onComplete(new AsyncOperation.CompletionHandler<Settings.AdvertisementConfig>() {
+            @Override
+            public void success(Settings.AdvertisementConfig result) {
+                if (isVisible()) {
+                    deviceName.setText(result.deviceName());
+                    adInterval.setText(String.format("%d", result.interval()));
+                    adTimeout.setText(String.format("%d", result.timeout()));
+                    txPower.setText(String.format("%d", result.txPower()));
+                }
+            }
+        });
+    }
+    @Override
+    public void connected(MetaWearBoard currBoard) {
+        this.currBoard= currBoard;
+        try {
+            settingsController= currBoard.getModule(Settings.class);
+            macroController= currBoard.getModule(Macro.class);
+            readSettingsConfig();
+        } catch (UnsupportedModuleException e) {
+            Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+        }
+
+    }
+
+    @Override
+    public void disconnected() {
+
     }
 }

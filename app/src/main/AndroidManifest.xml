@@ -24,7 +24,7 @@
                 android:resource="@xml/filepaths" />
         </provider>
         
-        <service android:name="com.mbientlab.metawear.api.MetaWearBleService" />
+        <service android:name="com.mbientlab.metawear.MetaWearBleService" />
         <service
             android:name="no.nordicsemi.android.nrftoolbox.dfu.DfuService"
             android:exported="true"

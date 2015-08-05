@@ -31,6 +31,7 @@
 package com.mbientlab.metawear.app;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -38,42 +39,46 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.mbientlab.metawear.api.MetaWearController;
-import com.mbientlab.metawear.api.Module;
-import com.mbientlab.metawear.api.MetaWearController.DeviceCallbacks;
-import com.mbientlab.metawear.api.controller.Accelerometer;
-import com.mbientlab.metawear.api.controller.Accelerometer.Axis;
-import com.mbientlab.metawear.api.controller.Accelerometer.TapType;
-import com.mbientlab.metawear.api.controller.DataProcessor;
-import com.mbientlab.metawear.api.controller.Event;
-import com.mbientlab.metawear.api.controller.LED;
-import com.mbientlab.metawear.api.controller.MechanicalSwitch;
-import com.mbientlab.metawear.api.controller.Temperature;
-import com.mbientlab.metawear.api.controller.LED.ColorChannel;
-import com.mbientlab.metawear.api.util.FilterConfigBuilder;
-import com.mbientlab.metawear.api.util.FilterConfigBuilder.ComparatorBuilder;
-import com.mbientlab.metawear.api.util.FilterConfigBuilder.ComparatorBuilder.Operation;
-import com.mbientlab.metawear.api.util.FilterConfigBuilder.MathBuilder;
-import com.mbientlab.metawear.api.util.LoggingTrigger;
+import com.mbientlab.metawear.AsyncOperation;
+import com.mbientlab.metawear.DataSignal;
+import com.mbientlab.metawear.Message;
+import com.mbientlab.metawear.MetaWearBoard;
+import com.mbientlab.metawear.RouteManager;
+import com.mbientlab.metawear.UnsupportedModuleException;
+import com.mbientlab.metawear.module.DataProcessor;
+import com.mbientlab.metawear.module.Led;
+import com.mbientlab.metawear.module.Mma8452qAccelerometer;
+import com.mbientlab.metawear.module.Switch;
+import com.mbientlab.metawear.module.Temperature;
+import com.mbientlab.metawear.module.Timer;
+import com.mbientlab.metawear.processor.Accumulator;
+import com.mbientlab.metawear.processor.Comparison;
+import com.mbientlab.metawear.processor.Delta;
+import com.mbientlab.metawear.processor.Maths;
+
+import java.util.Map;
 
 /**
  * @author etsai
  *
  */
 public class EventFragment extends ModuleFragment {
-    private DeviceCallbacks dCallback= new MetaWearController.DeviceCallbacks() {
-        @Override
-        public void connected() {
-            eventController.enableModule();
-            dpController.enableModule();
-        }
-    };
-    
+    private MetaWearBoard currBoard;
+
+    @Override
+    public void connected(MetaWearBoard currBoard) {
+        this.currBoard= currBoard;
+    }
+
+    @Override
+    public void disconnected() {
+
+    }
+
     private abstract class EventMacro {
         public abstract void program();
         public abstract void cleanup();
@@ -85,61 +90,56 @@ public class EventFragment extends ModuleFragment {
     
     private final EventMacro macros[]= new EventMacro[] {
         new EventMacro() {
-            private byte countFilterUid= -1, compFilterUid= -1;
-            private final DataProcessor.Callbacks dpCallbacks= new DataProcessor.Callbacks() {
-                @Override
-                public void receivedFilterId(byte filterId) {
-                    if (countFilterUid == -1) {
-                        countFilterUid= filterId;
-                        
-                        FilterConfigBuilder.ComparatorBuilder builder= new FilterConfigBuilder.ComparatorBuilder();
-                        builder.withOperation(Operation.EQ).withReference(3);
-                        dpController.chainFilters(filterId, (byte) 1, builder.build());
-                    } else {
-                        compFilterUid= filterId;
-                        
-                        eventController.recordMacro(DataProcessor.Register.FILTER_NOTIFICATION, compFilterUid);
-                        LED ledController= (LED) mwMnger.getCurrentController().getModuleController(Module.LED);
-                        ledController.setColorChannel(ColorChannel.GREEN).withRiseTime((short) 0)
-                                .withPulseDuration((short) 1000).withRepeatCount((byte) -1)
-                                .withHighTime((short) 500).withHighIntensity((byte) 16)
-                                .withLowIntensity((byte) 16).commit();
-                        ledController.play(false);
-                        eventController.stopRecord();
-                        
-                        eventController.recordMacro(Accelerometer.Register.PULSE_STATUS);
-                        dpController.resetFilterState(countFilterUid);
-                        ledController.stop(true);
-                        eventController.stopRecord();
-                        
-                        Accelerometer accelController= (Accelerometer) mwMnger.getCurrentController().getModuleController(Module.ACCELEROMETER);
-                        accelController.enableTapDetection(TapType.DOUBLE_TAP, Axis.Z);
-                        accelController.startComponents();
-                        
-                        mwMnger.getCurrentController().removeModuleCallback(this);
-                    }
-                }
-            };
-            
             @Override
             public void program() {
-                mwMnger.getCurrentController().addModuleCallback(dpCallbacks);
-                
-                FilterConfigBuilder.AccumulatorBuilder builder= new FilterConfigBuilder.AccumulatorBuilder();
-                
-                builder.withInputSize((byte) 1).withOutputSize((byte) 1);
-                dpController.addFilter(LoggingTrigger.SWITCH, builder.build());
+                try {
+                    final Mma8452qAccelerometer mma8452qAccelerometer= currBoard.getModule(Mma8452qAccelerometer.class);
+                    Switch switchModule= currBoard.getModule(Switch.class);
+                    final Led ledModule= currBoard.getModule(Led.class);
+
+                    switchModule.routeData().fromSensor()
+                            .process(new Accumulator())
+                            .process(new Maths(Maths.Operation.MODULUS, 3))
+                            .process(new Comparison(Comparison.Operation.EQ, 0))
+                            .monitor(new DataSignal.ActivityHandler() {
+                                @Override
+                                public void onSignalActive(Map<String, DataProcessor> map, DataSignal.DataToken dataToken) {
+                                    ledModule.configureColorChannel(Led.ColorChannel.GREEN).setRiseTime((short) 0)
+                                            .setPulseDuration((short) 1000).setRepeatCount((byte) -1)
+                                            .setHighTime((short) 500).setHighIntensity((byte) 16)
+                                            .setLowIntensity((byte) 16).commit();
+                                    ledModule.play(false);
+                                }
+                            }).commit();
+                    mma8452qAccelerometer.routeData().fromTap().monitor(new DataSignal.ActivityHandler() {
+                        @Override
+                        public void onSignalActive(Map<String, DataProcessor> map, DataSignal.DataToken dataToken) {
+                            ledModule.stop(true);
+                        }
+                    }).commit().onComplete(new AsyncOperation.CompletionHandler<RouteManager>() {
+                        @Override
+                        public void success(RouteManager result) {
+                            mma8452qAccelerometer.enableTapDetection(Mma8452qAccelerometer.TapType.DOUBLE);
+                            mma8452qAccelerometer.start();
+                        }
+                    });
+
+                } catch (UnsupportedModuleException e) {
+                    Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                }
             }
 
             @Override
             public void cleanup() {
-                dpController.removeFilter(countFilterUid);
-                dpController.removeFilter(compFilterUid);
-                
-                compFilterUid= -1;
-                countFilterUid= -1;
-                
-                ((Accelerometer) mwMnger.getCurrentController().getModuleController(Module.ACCELEROMETER)).stopComponents();
+                try {
+                    final Mma8452qAccelerometer mma8452qAccelerometer= currBoard.getModule(Mma8452qAccelerometer.class);
+                    mma8452qAccelerometer.stop();
+                    mma8452qAccelerometer.disableTapDetection();
+
+                    currBoard.removeRoutes();
+                } catch (UnsupportedModuleException e) {
+                    Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                }
             }
 
             @Override
@@ -153,70 +153,40 @@ public class EventFragment extends ModuleFragment {
             }
         },
         new EventMacro() {
-            private byte onFid= -1, dataSize= 1;
-            
-            private DataProcessor.Callbacks accum= new DataProcessor.Callbacks() {
-                @Override
-                public void receivedFilterId(byte filterId) {
-                    mwMnger.getCurrentController().removeModuleCallback(this);
-                    mwMnger.getCurrentController().addModuleCallback(math);
-                  
-                    dpController.chainFilters(filterId, (byte) 1, new MathBuilder()
-                            .withOperation(MathBuilder.Operation.MODULUS)
-                            .withOperand(2)
-                            .withInputSize(dataSize)
-                            .withOutputSize(dataSize).build());
-                }
-            }, math= new DataProcessor.Callbacks() {
-                @Override
-                public void receivedFilterId(byte filterId) {
-                    mwMnger.getCurrentController().removeModuleCallback(this);
-                    mwMnger.getCurrentController().addModuleCallback(comp);
-                  
-                    ComparatorBuilder compBuilder= new ComparatorBuilder()
-                            .withOperation(ComparatorBuilder.Operation.EQ);
-                    
-                    dpController.chainFilters(filterId, dataSize, compBuilder.withReference(1).build());
-                    dpController.chainFilters(filterId, dataSize, compBuilder.withReference(0).build());
-                }
-            }, comp= new DataProcessor.Callbacks() {
-                @Override
-                public void receivedFilterId(byte filterId) {
-                    LED ledController= (LED) mwMnger.getCurrentController().getModuleController(Module.LED);
-                    eventController.recordMacro(DataProcessor.Register.FILTER_NOTIFICATION, filterId);
-                  
-                    if (onFid == -1) {
-                        onFid= filterId;
-                        ledController.setColorChannel(ColorChannel.BLUE).withRiseTime((short) 0)
-                                .withPulseDuration((short) 1000).withRepeatCount((byte) -1)
-                                .withHighTime((short) 500).withHighIntensity((byte) 16)
-                                .withLowIntensity((byte) 16).commit();
-                        ledController.play(false);
-                    } else {
-                        ledController.stop(false);
-                    }
-                  
-                    eventController.stopRecord();
-                }
-            };
-            
             @Override
             public void program() {
-                mwMnger.getCurrentController().addModuleCallback(accum);
-                
-                FilterConfigBuilder.AccumulatorBuilder builder= new FilterConfigBuilder.AccumulatorBuilder();
-                
-                builder.withInputSize((byte) 1).withOutputSize((byte) 1);
-                dpController.addFilter(LoggingTrigger.SWITCH, builder.build());
+                try {
+                    Switch switchModule = currBoard.getModule(Switch.class);
+                    final Led ledModule = currBoard.getModule(Led.class);
+
+                    switchModule.routeData().fromSensor().process(new Accumulator())
+                            .process(new Maths(Maths.Operation.MODULUS, 2))
+                            .split()
+                                .branch().process(new Comparison(Comparison.Operation.EQ, 1)).monitor(new DataSignal.ActivityHandler() {
+                                    @Override
+                                    public void onSignalActive(Map<String, DataProcessor> map, DataSignal.DataToken dataToken) {
+                                        ledModule.configureColorChannel(Led.ColorChannel.BLUE).setRiseTime((short) 0)
+                                                .setPulseDuration((short) 1000).setRepeatCount((byte) -1)
+                                                .setHighTime((short) 500).setHighIntensity((byte) 16)
+                                                .setLowIntensity((byte) 16).commit();
+                                        ledModule.play(false);
+                                    }
+                                })
+                                .branch().process(new Comparison(Comparison.Operation.EQ, 0)).monitor(new DataSignal.ActivityHandler() {
+                                    @Override
+                                    public void onSignalActive(Map<String, DataProcessor> map, DataSignal.DataToken dataToken) {
+                                        ledModule.stop(true);
+                                    }
+                                })
+                            .end().commit();
+                } catch(UnsupportedModuleException e) {
+                    Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                }
             }
 
             @Override
             public void cleanup() {
-                dpController.removeAllFilters();
-                
-                onFid= -1;
-                
-                ((Accelerometer) mwMnger.getCurrentController().getModuleController(Module.ACCELEROMETER)).stopComponents();
+                currBoard.removeRoutes();
             }
 
             @Override
@@ -230,52 +200,38 @@ public class EventFragment extends ModuleFragment {
             }
         },
         new EventMacro() {
-            private byte lowFilterUid= -1, highFilterUid= -1;
-            private final DataProcessor.Callbacks dpCallbacks= new DataProcessor.Callbacks() {
-                @Override
-                public void receivedFilterId(byte filterId) {
-                    eventController.recordMacro(DataProcessor.Register.FILTER_NOTIFICATION, filterId);
-                    LED ledController= (LED) mwMnger.getCurrentController().getModuleController(Module.LED);
-                    
-                    if (highFilterUid == -1) {
-                        highFilterUid= filterId;
-                        ledController.play(true);
-                    } else {
-                        lowFilterUid= filterId;
-                        ledController.stop(false);
-                        
-                        mwMnger.getCurrentController().removeModuleCallback(this);
-                    }
-                    eventController.stopRecord();
-                }
-            };
-            
             @Override
             public void program() {
-                mwMnger.getCurrentController().addModuleCallback(dpCallbacks);
-                
-                LED ledController= (LED) mwMnger.getCurrentController().getModuleController(Module.LED);
-                ledController.setColorChannel(ColorChannel.RED)
-                        .withPulseDuration((short) 100).withRepeatCount((byte) -1)
-                        .withHighTime((short) 100).withHighIntensity((byte) 16).commit();
-                
-                ledController.setColorChannel(ColorChannel.BLUE)
-                        .withPulseDuration((short) 100).withRepeatCount((byte) -1)
-                        .withHighTime((short) 100).withHighIntensity((byte) 16).commit();
-        
-                dpController.addFilter(LoggingTrigger.SWITCH, new FilterConfigBuilder.ComparatorBuilder()
-                        .withOperation(Operation.EQ).withReference(1).build());
-                dpController.addFilter(LoggingTrigger.SWITCH, new FilterConfigBuilder.ComparatorBuilder()
-                        .withOperation(Operation.EQ).withReference(0).build());
+                try {
+                    Switch switchModule = currBoard.getModule(Switch.class);
+                    final Led ledModule = currBoard.getModule(Led.class);
+
+                    switchModule.routeData().fromSensor().split()
+                            .branch().process(new Comparison(Comparison.Operation.EQ, 1)).monitor(new DataSignal.ActivityHandler() {
+                                @Override
+                                public void onSignalActive(Map<String, DataProcessor> map, DataSignal.DataToken dataToken) {
+                                    ledModule.configureColorChannel(Led.ColorChannel.BLUE).setRiseTime((short) 0)
+                                            .setPulseDuration((short) 1000).setRepeatCount((byte) -1)
+                                            .setHighTime((short) 500).setHighIntensity((byte) 16)
+                                            .setLowIntensity((byte) 16).commit();
+                                    ledModule.play(false);
+                                }
+                            })
+                            .branch().process(new Comparison(Comparison.Operation.EQ, 0)).monitor(new DataSignal.ActivityHandler() {
+                                @Override
+                                public void onSignalActive(Map<String, DataProcessor> map, DataSignal.DataToken dataToken) {
+                                    ledModule.stop(true);
+                                }
+                            })
+                        .end().commit();
+                } catch(UnsupportedModuleException e) {
+                    Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                }
             }
 
             @Override
             public void cleanup() {
-                dpController.removeFilter(lowFilterUid);
-                dpController.removeFilter(highFilterUid);
-                
-                lowFilterUid= -1;
-                highFilterUid= -1;
+                currBoard.removeRoutes();
             }
 
             @Override
@@ -290,23 +246,42 @@ public class EventFragment extends ModuleFragment {
         },
         new EventMacro() {
             @Override public void program() {
-                LED ledController= (LED) mwMnger.getCurrentController().getModuleController(Module.LED);
-                
-                eventController.recordMacro(Accelerometer.Register.FREE_FALL_VALUE);
-                ledController.setColorChannel(ColorChannel.RED).withRiseTime((short) 0)
-                        .withPulseDuration((short) 200).withRepeatCount((byte) 10)
-                        .withHighTime((short) 100).withHighIntensity((byte) 16)
-                        .withLowIntensity((byte) 0).commit();
-                ledController.play(false);
-                eventController.stopRecord();
-                
-                Accelerometer accelController= (Accelerometer) mwMnger.getCurrentController().getModuleController(Module.ACCELEROMETER);
-                accelController.enableMotionDetection(Axis.values());
-                accelController.startComponents();
+                try {
+                    final Mma8452qAccelerometer mma8452qAccelerometer= currBoard.getModule(Mma8452qAccelerometer.class);
+                    final Led ledModule = currBoard.getModule(Led.class);
+
+                    mma8452qAccelerometer.routeData().fromMovement()
+                            .monitor(new DataSignal.ActivityHandler() {
+                                @Override
+                                public void onSignalActive(Map<String, DataProcessor> map, DataSignal.DataToken dataToken) {
+                                    ledModule.configureColorChannel(Led.ColorChannel.RED).setRiseTime((short) 0)
+                                            .setPulseDuration((short) 200).setRepeatCount((byte) 10)
+                                            .setHighTime((short) 100).setHighIntensity((byte) 16)
+                                            .setLowIntensity((byte) 0).commit();
+                                    ledModule.play(false);
+                                }
+                            }).commit().onComplete(new AsyncOperation.CompletionHandler<RouteManager>() {
+                                @Override
+                                public void success(RouteManager result) {
+                                    mma8452qAccelerometer.enableMovementDetection(Mma8452qAccelerometer.MovementType.MOTION);
+                                    mma8452qAccelerometer.start();
+                                }
+                            });
+                } catch (UnsupportedModuleException e) {
+                    Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                }
             }
             
             @Override public void cleanup() {
-                ((Accelerometer) mwMnger.getCurrentController().getModuleController(Module.ACCELEROMETER)).stopComponents();
+                try {
+                    final Mma8452qAccelerometer mma8452qAccelerometer= currBoard.getModule(Mma8452qAccelerometer.class);
+                    mma8452qAccelerometer.stop();
+                    mma8452qAccelerometer.disableMovementDetection();
+                } catch (UnsupportedModuleException e) {
+                    Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                }
+
+                currBoard.removeRoutes();
             }
 
             @Override
@@ -321,27 +296,63 @@ public class EventFragment extends ModuleFragment {
         },
         new EventMacro() {
             @Override public void program() {
-                LED ledController= (LED) mwMnger.getCurrentController().getModuleController(Module.LED);
-                
-                eventController.recordMacro(Temperature.Register.DELTA_TEMP);
-                ledController.setColorChannel(ColorChannel.BLUE).withRiseTime((short) 0)
-                    .withPulseDuration((short) 200).withRepeatCount((byte) -1)
-                    .withHighTime((short) 100).withHighIntensity((byte) 16)
-                    .withLowIntensity((byte) 0).commit();
-                ledController.play(false);
-                eventController.stopRecord();
-                
-                eventController.recordMacro(MechanicalSwitch.Register.SWITCH_STATE);
-                ledController.stop(true);
-                eventController.stopRecord();
-                
-                Temperature tempController= (Temperature) mwMnger.getCurrentController().getModuleController(Module.TEMPERATURE);
-                tempController.enableSampling().withSamplingPeriod(500)
-                    .withTemperatureDelta(2).commit();
+                try {
+                    final Temperature tempModule= currBoard.getModule(Temperature.class);
+                    final Led ledModule= currBoard.getModule(Led.class);
+                    final Switch switchModule= currBoard.getModule(Switch.class);
+                    final Timer timerModule= currBoard.getModule(Timer.class);
+
+                    tempModule.routeData().fromSensor().stream("event_5").process(new Delta(Delta.OutputMode.ABSOLUTE, 2.f)).monitor(new DataSignal.ActivityHandler() {
+                        @Override
+                        public void onSignalActive(Map<String, DataProcessor> map, DataSignal.DataToken dataToken) {
+                            ledModule.configureColorChannel(Led.ColorChannel.BLUE).setRiseTime((short) 0)
+                                    .setPulseDuration((short) 200).setRepeatCount((byte) -1)
+                                    .setHighTime((short) 100).setHighIntensity((byte) 16)
+                                    .setLowIntensity((byte) 0).commit();
+                            ledModule.play(false);
+                        }
+                    }).commit().onComplete(new AsyncOperation.CompletionHandler<RouteManager>() {
+                        @Override
+                        public void success(RouteManager result) {
+                            result.subscribe("event_5", new RouteManager.MessageHandler() {
+                                @Override
+                                public void process(Message message) {
+                                    Log.i("test", String.format("%.3f", message.getData(Float.class)));
+                                }
+                            });
+                        }
+                    });
+                    switchModule.routeData().fromSensor().monitor(new DataSignal.ActivityHandler() {
+                        @Override
+                        public void onSignalActive(Map<String, DataProcessor> map, DataSignal.DataToken dataToken) {
+                            ledModule.stop(true);
+                        }
+                    }).commit();
+                    timerModule.scheduleTask(new Timer.Task() {
+                        @Override
+                        public void commands() {
+                            tempModule.readTemperature();
+                        }
+                    }, 500, false).onComplete(new AsyncOperation.CompletionHandler<Timer.Controller>() {
+                        @Override
+                        public void success(Timer.Controller result) {
+                            result.start();
+                        }
+                    });
+                } catch (UnsupportedModuleException e) {
+                    Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                }
             }
             
             @Override public void cleanup() {
-                ((Temperature) mwMnger.getCurrentController().getModuleController(Module.TEMPERATURE)).disableSampling();
+                try {
+                    final Timer timerModule = currBoard.getModule(Timer.class);
+                    timerModule.removeTimers();
+                } catch (UnsupportedModuleException e) {
+                    Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                } finally {
+                    currBoard.removeRoutes();
+                }
             }
 
             @Override
@@ -355,14 +366,6 @@ public class EventFragment extends ModuleFragment {
             }
         }
     };
-    private Event eventController;
-    private DataProcessor dpController;
-
-    @Override
-    public void controllerReady(MetaWearController mwController) {
-        eventController= (Event) mwController.getModuleController(Module.EVENT);
-        dpController= (DataProcessor) mwController.getModuleController(Module.DATA_PROCESSOR);
-    }
     
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -371,19 +374,9 @@ public class EventFragment extends ModuleFragment {
     }
     
     @Override
-    public void onDestroy() {
-        final MetaWearController mwController= mwMnger.getCurrentController();
-        if (mwMnger.hasController()) {
-            mwController.removeDeviceCallback(dCallback);
-        }
-        
-        super.onDestroy();
-    }
-    
-    @Override
     public void onViewCreated(final View view, Bundle savedInstanceState) {
         final Spinner macroSpinner= ((Spinner) view.findViewById(R.id.spinner1));
-        macroSpinner.setAdapter(new ArrayAdapter<EventMacro>(getActivity(),
+        macroSpinner.setAdapter(new ArrayAdapter<>(getActivity(),
                 R.layout.command_row, R.id.command_name, macros));
         
         macroSpinner.setOnItemSelectedListener(new OnItemSelectedListener() {
@@ -398,8 +391,8 @@ public class EventFragment extends ModuleFragment {
             @Override
             public void onNothingSelected(AdapterView<?> parent) { }
         });
-        
-        ((Button) view.findViewById(R.id.button1)).setOnClickListener(new OnClickListener() {
+
+        view.findViewById(R.id.button1).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (mwMnger.controllerReady()) {
@@ -409,12 +402,11 @@ public class EventFragment extends ModuleFragment {
                 }
             }
         });
-        ((Button) view.findViewById(R.id.button2)).setOnClickListener(new OnClickListener() {
+        view.findViewById(R.id.button2).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (mwMnger.controllerReady()) {
                     macros[macroSpinner.getSelectedItemPosition()].cleanup();
-                    eventController.removeMacros();
                 } else {
                     Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
                 }

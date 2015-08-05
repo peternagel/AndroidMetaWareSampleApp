@@ -8,12 +8,11 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import com.mbientlab.metawear.api.MetaWearController;
-import com.mbientlab.metawear.api.Module;
-import com.mbientlab.metawear.api.controller.Haptic;
+import com.mbientlab.metawear.MetaWearBoard;
+import com.mbientlab.metawear.UnsupportedModuleException;
+import com.mbientlab.metawear.module.Haptic;
 
 public class HapticFragment extends ModuleFragment {
-    private Haptic hapticController;
     private EditText pulseWidth, dutyCycle;
     
     @Override
@@ -27,16 +26,19 @@ public class HapticFragment extends ModuleFragment {
         pulseWidth= (EditText) view.findViewById(R.id.editText1);
         dutyCycle= (EditText) view.findViewById(R.id.editText2);
                 
-        ((Button) view.findViewById(R.id.button1)).setOnClickListener(new Button.OnClickListener() {
+        view.findViewById(R.id.button1).setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mwMnger.controllerReady()) {
+                if (currBoard != null && currBoard.isConnected()) {
                     try {
+                        Haptic hapticController= currBoard.getModule(Haptic.class);
                         hapticController.startMotor(Float.valueOf((dutyCycle).getEditableText().toString()),
                                 Short.valueOf((pulseWidth).getEditableText().toString()));
                     } catch (NumberFormatException ex) {
                         Toast.makeText(getActivity(), "Enter a valid pulse width and duty cycle", 
                                 Toast.LENGTH_SHORT).show();
+                    } catch (UnsupportedModuleException e) {
+                        Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
                     }
                 } else {
                     Toast.makeText(getActivity(), R.string.error_connect_board, 
@@ -45,27 +47,35 @@ public class HapticFragment extends ModuleFragment {
             }
         });
         
-        ((Button) view.findViewById(R.id.button2)).setOnClickListener(new Button.OnClickListener() {
+        view.findViewById(R.id.button2).setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mwMnger.controllerReady()) {
+                if (currBoard != null && currBoard.isConnected()) {
                     try {
+                        Haptic hapticController= currBoard.getModule(Haptic.class);
                         hapticController.startBuzzer(Short.valueOf((pulseWidth).getEditableText().toString()));
                     } catch (NumberFormatException ex) {
-                        Toast.makeText(getActivity(), "Enter a valid pulse width", 
+                        Toast.makeText(getActivity(), "Enter a valid pulse width",
                                 Toast.LENGTH_SHORT).show();
+                    } catch (UnsupportedModuleException e) {
+                        Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
                     }
                 } else {
-                    Toast.makeText(getActivity(), R.string.error_connect_board, 
+                    Toast.makeText(getActivity(), R.string.error_connect_board,
                             Toast.LENGTH_LONG).show();
                 }
             }
         });
     }
-    
+
+    private MetaWearBoard currBoard;
     @Override
-    public void controllerReady(MetaWearController mwController) {
-        hapticController= (Haptic) mwController.getModuleController(Module.HAPTIC);
-        
+    public void connected(MetaWearBoard currBoard) {
+        this.currBoard= currBoard;
+    }
+
+    @Override
+    public void disconnected() {
+
     }
 }

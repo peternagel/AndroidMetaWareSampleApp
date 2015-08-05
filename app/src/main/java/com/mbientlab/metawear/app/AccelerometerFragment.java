@@ -34,29 +34,28 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Locale;
-import java.util.Vector;
 
-import com.mbientlab.metawear.api.MetaWearController;
-import com.mbientlab.metawear.api.Module;
-import com.mbientlab.metawear.api.MetaWearController.DeviceCallbacks;
-import com.mbientlab.metawear.api.controller.Accelerometer;
-import com.mbientlab.metawear.api.controller.Accelerometer.*;
-import com.mbientlab.metawear.api.controller.Accelerometer.SamplingConfig.FullScaleRange;
-import com.mbientlab.metawear.api.controller.Accelerometer.SamplingConfig.OutputDataRate;
-import com.mbientlab.metawear.api.controller.DataProcessor;
-import com.mbientlab.metawear.api.util.BytesInterpreter;
-import com.mbientlab.metawear.api.util.FilterConfigBuilder;
+import com.mbientlab.metawear.AsyncOperation;
+import com.mbientlab.metawear.Message;
+import com.mbientlab.metawear.RouteManager;
+import com.mbientlab.metawear.UnsupportedModuleException;
+import com.mbientlab.metawear.data.CartesianFloat;
+import com.mbientlab.metawear.module.Accelerometer;
+import com.mbientlab.metawear.MetaWearBoard;
+
 import com.mbientlab.metawear.app.popup.AccelerometerSettings;
 import com.mbientlab.metawear.app.popup.DataPlotFragment;
+import com.mbientlab.metawear.module.Bmi160Accelerometer;
+import com.mbientlab.metawear.module.Mma8452qAccelerometer;
 
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.content.FileProvider;
@@ -67,42 +66,32 @@ import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.view.animation.AlphaAnimation;
 import android.widget.CheckBox;
-import android.widget.Button;
-import android.widget.Toast;
 import android.widget.TextView;
+import android.widget.Toast;
 
 /**
  * @author etsai
- *
  */
 public class AccelerometerFragment extends ModuleFragment {
     public interface Configuration {
-        public int tapTypePos();
-        public int tapAxisPos();
-        public int movementPos();
-        public int shakeAxisPos();
-        public int fsrPos();
-        public int odrPos();
-        public int firmwarePos();
+        int tapTypePos();
+        int tapAxisPos();
+        int movementPos();
+        int shakeAxisPos();
         
-        public void modifyTapType(int newIndex);
-        public void modifyTapAxis(int newIndex);
-        public void modifyShakeAxis(int newIndex);
-        public void modifyMovementType(int newIndex);
-        public void modifyDataRange(int newIndex);
-        public void modifySamplingRate(int newIndex);
-        public void modifyFirmwareVersion(int newIndex);
+        void modifyTapType(int newIndex);
+        void modifyTapAxis(int newIndex);
+        void modifyShakeAxis(int newIndex);
+        void modifyMovementType(int newIndex);
         
-        public Collection<byte[]> polledBytes();
-        public byte[] getSamplingConfig();
-        public void initialize(byte[] config);
+        Collection<float[]> polledBytes();
+        void initialize();
     }
-    
+
+    private Mma8452qAccelerometer mma8452qModule= null;
+    private Bmi160Accelerometer bmi160AccelModule= null;
+    private Accelerometer accelModule;
     private long start;
-    private Vector<Short> rmsValues;
-    private Accelerometer accelController;
-    private DataProcessor dpController;
-    private byte rmsFilterId= -1;
     private Configuration accelConfig;
     
     private static final AlphaAnimation fadeOut= new AlphaAnimation(1.0f , 0.0f);
@@ -110,89 +99,7 @@ public class AccelerometerFragment extends ModuleFragment {
         fadeOut.setDuration(2000);
         fadeOut.setFillAfter(true);
     }
-    
-    private DeviceCallbacks dCallback= new MetaWearController.DeviceCallbacks() {
-        @Override
-        public void connected() {
-            FilterConfigBuilder.RMSBuilder builder= new FilterConfigBuilder.RMSBuilder();
-            builder.withInputCount((byte) 3).withSignedInput().withInputSize((byte) 2)
-                    .withOutputSize((byte) 2);
-            
-            //dpController.addFilter(accelTrigger, builder.build());
-        }
-    };
-    
-    private final DataProcessor.Callbacks dpCallbacks= new DataProcessor.Callbacks() {
-        @Override
-        public void receivedFilterId(byte filterId) {
-            rmsFilterId= filterId;
-            dpController.enableFilterNotify(rmsFilterId);
-        }
-        
-        @Override
-        public void receivedFilterOutput(byte filterId, byte[] output) {
-            rmsValues.add(ByteBuffer.wrap(output).order(ByteOrder.LITTLE_ENDIAN).getShort());
-        }   
-    };
-    
-    private Accelerometer.Callbacks mCallback= new Accelerometer.Callbacks() {
-        @Override 
-        public void movementDetected(MovementData moveData) {
-            TextView shakeText= (TextView) getView().findViewById(R.id.textView8);
-            if (accelConfig.movementPos() == 0) {
-                shakeText.setText("Falling Skies");
-            } else {
-                shakeText.setText("Move your body");
-            }
-            shakeText.startAnimation(fadeOut);
-        }
-        
-        @Override 
-        public void orientationChanged(Orientation accelOrientation) {
-            TextView shakeText= (TextView) getView().findViewById(R.id.textView6);
-            shakeText.setText(String.format(Locale.US, "%s", accelOrientation.toString()));
-            shakeText.startAnimation(fadeOut);
-        }
-        
-        @Override
-        public void shakeDetected(MovementData moveData) {
-            TextView shakeText= (TextView) getView().findViewById(R.id.textView4);
-            shakeText.setText("Shake it like a polariod picture");
-            shakeText.startAnimation(fadeOut);
-        }
-        
-        @Override
-        public void doubleTapDetected(MovementData moveData) {
-            TextView tapText= (TextView) getView().findViewById(R.id.textView2);
-            tapText.setText("Double Beer Taps");
-            tapText.startAnimation(fadeOut);
-        }
-        
-        @Override
-        public void singleTapDetected(MovementData moveData) {
-            TextView tapText= (TextView) getView().findViewById(R.id.textView2);
-            tapText.setText("Beer Tap");
-            tapText.startAnimation(fadeOut);
-        }
 
-        @Override
-        public void receivedDataValue(short x, short y, short z) {
-            if (accelConfig.polledBytes() != null) {
-                ByteBuffer buffer= ByteBuffer.allocate(14)
-                        .putShort(x).putShort(y).putShort(z);
-                
-                if (start == 0) {
-                    buffer.putLong((long) 0);
-                    start= System.currentTimeMillis();
-                } else {
-                    buffer.putLong(System.currentTimeMillis() - start);
-                }
-                
-                accelConfig.polledBytes().add(buffer.array());
-            }
-        }
-    };
-    
     @Override
     public void onAttach(Activity activity) {
         super.onAttach(activity);
@@ -210,35 +117,124 @@ public class AccelerometerFragment extends ModuleFragment {
             Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_accelerometer, container, false);
     }
-    
-    @Override
-    public void onDestroy() {
-        final MetaWearController mwController= mwMnger.getCurrentController();
-        if (mwMnger.hasController()) {
-            mwController.removeModuleCallback(mCallback);
-            mwController.removeModuleCallback(dpCallbacks);
-            mwController.removeDeviceCallback(dCallback);
+
+    private void addRoutes() {
+        accelModule.routeData().fromAxes().stream("axis_stream").commit().onComplete(new AsyncOperation.CompletionHandler<RouteManager>() {
+            @Override
+            public void success(RouteManager result) {
+                result.subscribe("axis_stream", new RouteManager.MessageHandler() {
+                    @Override
+                    public void process(Message message) {
+                        if (accelConfig.polledBytes() != null) {
+                            float offset;
+                            CartesianFloat axisGs = message.getData(CartesianFloat.class);
+                            if (start == 0) {
+                                start = System.currentTimeMillis();
+                                offset = 0.f;
+                            } else {
+                                offset = (System.currentTimeMillis() - start) / 1000.f;
+                            }
+
+                            accelConfig.polledBytes().add(new float[]{offset, axisGs.x(), axisGs.y(), axisGs.z()});
+                        }
+                    }
+                });
+            }
+        });
+
+        if (mma8452qModule != null) {
+            mma8452qModule.routeData().fromOrientation().stream("orientation_stream").commit().onComplete(new AsyncOperation.CompletionHandler<RouteManager>() {
+                @Override
+                public void success(RouteManager result) {
+                    result.subscribe("orientation_stream", new RouteManager.MessageHandler() {
+                        @Override
+                        public void process(Message message) {
+                            TextView responseText= (TextView) getView().findViewById(R.id.textView6);
+                            responseText.setText(String.format(Locale.US, "%s", message.getData(Mma8452qAccelerometer.Orientation.class).toString()));
+                            responseText.startAnimation(fadeOut);
+                        }
+                    });
+                }
+            });
+            mma8452qModule.routeData().fromMovement().stream("movement_stream").commit().onComplete(new AsyncOperation.CompletionHandler<RouteManager>() {
+                @Override
+                public void success(RouteManager result) {
+                    result.subscribe("movement_stream", new RouteManager.MessageHandler() {
+                        @Override
+                        public void process(Message message) {
+                            TextView responseText= (TextView) getView().findViewById(R.id.textView8);
+                            if (accelConfig.movementPos() == 0) {
+                                responseText.setText("Falling Skies");
+                            } else {
+                                responseText.setText("Move your body");
+                            }
+                            responseText.startAnimation(fadeOut);
+                        }
+                    });
+                }
+            });
+            mma8452qModule.routeData().fromShake().stream("shake_stream").commit().onComplete(new AsyncOperation.CompletionHandler<RouteManager>() {
+                @Override
+                public void success(RouteManager result) {
+                    result.subscribe("shake_stream", new RouteManager.MessageHandler() {
+                        @Override
+                        public void process(Message message) {
+                            TextView responseText= (TextView) getView().findViewById(R.id.textView4);
+                            responseText.setText("Shake it like a polariod picture");
+                            responseText.startAnimation(fadeOut);
+                        }
+                    });
+                }
+            });
+            mma8452qModule.routeData().fromTap().stream("tap_stream").commit().onComplete(new AsyncOperation.CompletionHandler<RouteManager>() {
+                @Override
+                public void success(RouteManager result) {
+                    result.subscribe("tap_stream", new RouteManager.MessageHandler() {
+                        @Override
+                        public void process(Message message) {
+                            TextView tapText= (TextView) getView().findViewById(R.id.textView2);
+
+                            Mma8452qAccelerometer.TapData data= message.getData(Mma8452qAccelerometer.TapData.class);
+                            switch(data.type()) {
+                                case DOUBLE:
+                                    tapText.setText("Double Taps");
+                                    break;
+                                case SINGLE:
+                                    tapText.setText("Single Taps");
+                                    break;
+                                default:
+                                    tapText.setText("Unkown");
+                                    break;
+                            }
+                            tapText.startAnimation(fadeOut);
+                        }
+                    });
+                }
+            });
         }
-        
-        if (rmsFilterId != -1) {
-            dpController.removeFilter(rmsFilterId);
-        }
-        super.onDestroy();
     }
 
     @Override
-    public void controllerReady(MetaWearController mwController) {
-        accelController= (Accelerometer) mwController.getModuleController(Module.ACCELEROMETER);
-        dpController= (DataProcessor) mwController.getModuleController(Module.DATA_PROCESSOR);
-        mwController.addModuleCallback(mCallback).addModuleCallback(dpCallbacks).addDeviceCallback(dCallback);
-        
-        if (mwController.isConnected()) {
-            FilterConfigBuilder.RMSBuilder builder= new FilterConfigBuilder.RMSBuilder();
-            builder.withInputCount((byte) 3).withSignedInput().withInputSize((byte) 2)
-                    .withOutputSize((byte) 2);
-            
-            //dpController.addFilter(accelTrigger, builder.build());
+    public void connected(MetaWearBoard currBoard) {
+        currBoard.removeRoutes();
+
+        try {
+            accelModule = currBoard.getModule(Accelerometer.class);
+            if (accelModule instanceof Mma8452qAccelerometer) {
+                mma8452qModule = (Mma8452qAccelerometer) accelModule;
+            } else if (accelModule instanceof  Bmi160Accelerometer) {
+                bmi160AccelModule= (Bmi160Accelerometer) accelModule;
+            }
+
+            addRoutes();
+        } catch (UnsupportedModuleException e) {
+            Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
         }
+    }
+
+    @Override
+    public void disconnected() {
+
     }
 
     private static final String CSV_HEADER= String.format("time,xAxis,yAxis,zAxis%n");
@@ -248,17 +244,9 @@ public class AccelerometerFragment extends ModuleFragment {
         TAP, SHAKE, ORIENTATION, FREE_FALL, SAMPLING;
     }
     private HashMap<CheckBoxName, CheckBox> checkboxes;
-    /*
-    private Trigger accelTrigger= new Trigger() {
-        @Override public Register register() { return Accelerometer.Register.DATA_VALUE; }
-        @Override public byte index() { return (byte) 0xff; }
-        @Override public byte offset() { return 0; }
-        @Override public byte length() { return 6; }
-    };
-    */
     
     @Override
-    public void onViewCreated(View view, Bundle savedInstanceState) {
+    public void onViewCreated(final View view, Bundle savedInstanceState) {
         checkboxes= new HashMap<>();
         checkboxes.put(CheckBoxName.TAP, (CheckBox) view.findViewById(R.id.checkBox1));
         checkboxes.put(CheckBoxName.SHAKE, (CheckBox) view.findViewById(R.id.checkBox2));
@@ -266,51 +254,83 @@ public class AccelerometerFragment extends ModuleFragment {
         checkboxes.put(CheckBoxName.FREE_FALL, (CheckBox) view.findViewById(R.id.checkBox4));
         checkboxes.put(CheckBoxName.SAMPLING, (CheckBox) view.findViewById(R.id.checkBox5));
         
-        ((Button) view.findViewById(R.id.button3)).setOnClickListener(new OnClickListener() {
+        view.findViewById(R.id.button3).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View arg0) {
                 if (mwMnger.controllerReady()) {
-                    accelController.stopComponents();
-                    accelController.disableAllDetection(true);
+                    accelModule.stop();
+
+                    if (mma8452qModule != null) {
+                        mma8452qModule.disableMovementDetection();
+                        mma8452qModule.disableShakeDetection();
+                        mma8452qModule.disableTapDetection();
+                        mma8452qModule.disableOrientationDetection();
+                    }
+
+                    accelModule.disableAxisSampling();
                     for(CheckBox box: checkboxes.values()) {
                         box.setEnabled(true);
                     }
-                    
+
+                    ((TextView) view.findViewById(R.id.textView2)).setText("");
+                    ((TextView) view.findViewById(R.id.textView4)).setText("");
+                    ((TextView) view.findViewById(R.id.textView6)).setText("");
+                    ((TextView) view.findViewById(R.id.textView8)).setText("");
                 } else{
                     Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
                 }
             }
         });
-        ((Button) view.findViewById(R.id.button1)).setOnClickListener(new OnClickListener() {
+        view.findViewById(R.id.button1).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View arg0) {
                 if (mwMnger.controllerReady()) {
                     if (checkboxes.get(CheckBoxName.TAP).isChecked()) {
-                        accelController.enableTapDetection(TapType.values()[accelConfig.tapTypePos()], 
-                                Axis.values()[accelConfig.tapAxisPos()]);
+                        if (mma8452qModule != null) {
+                            mma8452qModule.configureTapDetection()
+                                    .setAxis(Mma8452qAccelerometer.Axis.values()[accelConfig.tapAxisPos()]).commit();
+                            mma8452qModule.enableTapDetection(Mma8452qAccelerometer.TapType.values()[accelConfig.tapTypePos()]);
+                        } else {
+                            ((TextView) view.findViewById(R.id.textView2)).setText("Not yet supported");
+                        }
                     }
                     if (checkboxes.get(CheckBoxName.SHAKE).isChecked()) {
-                        accelController.enableShakeDetection(Axis.values()[accelConfig.shakeAxisPos()]);
+                        if (mma8452qModule != null) {
+                            mma8452qModule.configureShakeDetection()
+                                    .setAxis(Mma8452qAccelerometer.Axis.values()[accelConfig.shakeAxisPos()]).commit();
+                            mma8452qModule.enableShakeDetection();
+                        } else {
+                            ((TextView) view.findViewById(R.id.textView4)).setText("Not yet supported");
+                        }
                     }
                     if (checkboxes.get(CheckBoxName.ORIENTATION).isChecked()) {
-                        accelController.enableOrientationDetection();
+                        if (mma8452qModule != null) {
+                            mma8452qModule.enableOrientationDetection();
+                        } else {
+                            ((TextView) view.findViewById(R.id.textView6)).setText("Not yet supported");
+                        }
                     }
                     if (checkboxes.get(CheckBoxName.FREE_FALL).isChecked()) {
-                        if (accelConfig.movementPos() == 0) {
-                            accelController.enableFreeFallDetection();
+                        if (mma8452qModule != null) {
+                            if (accelConfig.movementPos() == 0) {
+                                mma8452qModule.configureFreeFallDetection().commit();
+                                mma8452qModule.enableMovementDetection(Mma8452qAccelerometer.MovementType.FREE_FALL);
+                            } else {
+                                mma8452qModule.configureMotionDetection().setAxes(Mma8452qAccelerometer.Axis.values()).commit();
+                                mma8452qModule.enableMovementDetection(Mma8452qAccelerometer.MovementType.MOTION);
+                            }
                         } else {
-                            accelController.enableMotionDetection(Axis.values());
+                            ((TextView) view.findViewById(R.id.textView8)).setText("Not yet supported");
                         }
                     }
                     if (checkboxes.get(CheckBoxName.SAMPLING).isChecked()) {
-                        rmsValues= new Vector<>();
-                        SamplingConfig config= accelController.enableXYZSampling();
-                        config.withFullScaleRange(FullScaleRange.values()[accelConfig.fsrPos()])
-                                .withOutputDataRate(OutputDataRate.values()[accelConfig.odrPos()]);
-                        accelConfig.initialize(config.getBytes());
+                        accelModule.setOutputDataRate(50.f);
+                        accelModule.setAxisSamplingRange(4.f);
+                        accelModule.enableAxisSampling();
+                        accelConfig.initialize();
                         start= 0;
                     }
-                    accelController.startComponents();
+                    accelModule.start();
                     
                     for(CheckBox box: checkboxes.values()) {
                         box.setEnabled(false);
@@ -320,7 +340,7 @@ public class AccelerometerFragment extends ModuleFragment {
                 }
             }
         });
-        ((Button) view.findViewById(R.id.button2)).setOnClickListener(new OnClickListener() {
+        view.findViewById(R.id.button2).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 final FragmentManager fm = getActivity().getSupportFragmentManager();
@@ -329,7 +349,7 @@ public class AccelerometerFragment extends ModuleFragment {
                 dialog.show(fm, "accelerometer_settings");
             }
         });
-        ((Button) view.findViewById(R.id.textView10)).setOnClickListener(new OnClickListener() {
+        view.findViewById(R.id.textView10).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (accelConfig.polledBytes() == null) {
@@ -338,24 +358,24 @@ public class AccelerometerFragment extends ModuleFragment {
                     final FragmentManager fm = getActivity().getSupportFragmentManager();
                     final DataPlotFragment dialog= new DataPlotFragment();
                     
-                    dialog.show(fm, "resistance_graph_fragment");   
+                    dialog.show(fm, "resistance_graph_fragment");
                 }
             }
         });
-        ((Button) view.findViewById(R.id.textView11)).setOnClickListener(new OnClickListener() {
+        view.findViewById(R.id.textView11).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (accelConfig.polledBytes() == null) {
                     Toast.makeText(getActivity(), R.string.error_no_accel_data, Toast.LENGTH_SHORT).show();
-                } else {                
+                } else {
                     writeDataToFile();
-                    
-                    Intent intent= new Intent(Intent.ACTION_SEND);
+
+                    Intent intent = new Intent(Intent.ACTION_SEND);
                     intent.setType("text/plain");
                     intent.putExtra(Intent.EXTRA_SUBJECT, "Logged Accelerometer Data");
-                    
-                    File file= getActivity().getFileStreamPath(dataFilename);
-                    Uri uri= FileProvider.getUriForFile(getActivity(), 
+
+                    File file = getActivity().getFileStreamPath(dataFilename);
+                    Uri uri = FileProvider.getUriForFile(getActivity(),
                             "com.mbientlab.metawear.app.fileprovider", file);
                     intent.putExtra(Intent.EXTRA_STREAM, uri);
                     startActivity(Intent.createChooser(intent, "Send email..."));
@@ -365,30 +385,14 @@ public class AccelerometerFragment extends ModuleFragment {
     }
     
     private void writeDataToFile() {
-        dataFilename= String.format(Locale.US, "metawear_accelerometer_data-%s-%s.csv", 
-                FullScaleRange.values()[accelConfig.fsrPos()].toString(), 
-                OutputDataRate.values()[accelConfig.odrPos()].toString());
+        dataFilename= String.format(Locale.US, "metawear_accelerometer_data-%s-%s.csv", "50Hz", "4g");
         try {
             FileOutputStream fos= getActivity().openFileOutput(dataFilename, Context.MODE_PRIVATE);
             fos.write(CSV_HEADER.getBytes());
-            
-            for(byte[] dataBytes: accelConfig.polledBytes()) {
-                ByteBuffer buffer= ByteBuffer.wrap(dataBytes);
-                double tickInS= (double) (buffer.getLong(6) / 1000.0);
-                float xAccel, yAccel, zAccel;
-                
-                if (accelConfig.firmwarePos() == 0) {
-                    xAccel= buffer.getShort(0) / 1000.0f;
-                    yAccel= buffer.getShort(2) / 1000.0f;
-                    zAccel= buffer.getShort(4) / 1000.0f;
-                } else {
-                    xAccel= BytesInterpreter.bytesToGs(accelConfig.getSamplingConfig(), buffer.getShort(0));
-                    yAccel= BytesInterpreter.bytesToGs(accelConfig.getSamplingConfig(), buffer.getShort(2));
-                    zAccel= BytesInterpreter.bytesToGs(accelConfig.getSamplingConfig(), buffer.getShort(4));
-                }
 
-                fos.write(String.format(Locale.US, "%.3f,%.3f,%.3f,%.3f%n", tickInS, 
-                        xAccel, yAccel, zAccel).getBytes());
+            for (float[] dataBytes : accelConfig.polledBytes()) {
+                fos.write(String.format(Locale.US, "%.3f,%.3f,%.3f,%.3f%n", dataBytes[0],
+                        dataBytes[1], dataBytes[2], dataBytes[3]).getBytes());
             }
             
             fos.close();

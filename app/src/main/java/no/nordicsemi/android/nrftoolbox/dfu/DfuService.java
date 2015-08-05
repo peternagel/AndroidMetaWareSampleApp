@@ -87,10 +87,8 @@ import java.util.UUID;
 
 import org.apache.http.client.methods.HttpGet;
 
-import com.mbientlab.metawear.api.characteristic.MetaWear;
-import com.mbientlab.metawear.api.GATT.GATTService;
-import com.mbientlab.metawear.api.controller.Debug;
-import com.mbientlab.metawear.api.util.Registers;
+import com.mbientlab.metawear.impl.characteristic.DebugRegister;
+import com.mbientlab.metawear.impl.characteristic.Registers;
 import com.mbientlab.metawear.app.R;
 import com.mbientlab.metawear.app.BuildConfig;
 
@@ -275,30 +273,44 @@ public class DfuService extends IntentService {
 	};
 	
 	public static String ACTION_RECONNECT_BOOTLOADER= "ACTION_RECONNECT_BOOTLOADER";
-	private BluetoothGattCallback normalCallback= new BluetoothGattCallback() {
+    private boolean serviceCheckActive;
+    private BluetoothGattCallback dfuServiceCheckCallback = new BluetoothGattCallback() {
 
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-            switch (newState) {
-            case BluetoothProfile.STATE_CONNECTED:
-                gatt.discoverServices();
-                break;
-            case BluetoothProfile.STATE_DISCONNECTED:
-                mConnectionState = STATE_DISCONNECTED;
-                synchronized (mLock) {
-                    mLock.notifyAll();
+            if (serviceCheckActive) {
+                switch (newState) {
+                    case BluetoothProfile.STATE_CONNECTED:
+                        gatt.discoverServices();
+                        break;
+                    case BluetoothProfile.STATE_DISCONNECTED:
+                        mConnectionState = STATE_DISCONNECTED;
+                        synchronized (mLock) {
+                            mLock.notifyAll();
+                        }
+                        break;
                 }
-                break;
             }
         }
-        
+
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
-            BluetoothGattService mwBleService= gatt.getService(GATTService.METAWEAR.uuid());
-            BluetoothGattCharacteristic cmdRegister= mwBleService.getCharacteristic(MetaWear.COMMAND.uuid());
-            cmdRegister.setValue(Registers.buildWriteCommand(Debug.Register.JUMP_TO_BOOTLOADER));
-            
-            gatt.writeCharacteristic(cmdRegister);
+            if (serviceCheckActive) {
+                final UUID METAWEAR_SERVICE = UUID.fromString("326A9000-85CB-9195-D9DD-464CFBBAE75A"),
+                        METAWEAR_COMMAND = UUID.fromString("326A9001-85CB-9195-D9DD-464CFBBAE75A");
+
+                BluetoothGattService dfuService = gatt.getService(DFU_SERVICE_UUID);
+                if (dfuService != null) {
+                    ///< Board already in MetaBoot mode
+                    gatt.disconnect();
+                } else {
+                    BluetoothGattService mwBleService = gatt.getService(METAWEAR_SERVICE);
+                    BluetoothGattCharacteristic cmdRegister = mwBleService.getCharacteristic(METAWEAR_COMMAND);
+                    cmdRegister.setValue(Registers.buildWriteCommand(DebugRegister.JUMP_TO_BOOTLOADER));
+
+                    gatt.writeCharacteristic(cmdRegister);
+                }
+            }
         }
 
     };
@@ -838,7 +850,8 @@ public class DfuService extends IntentService {
 
 		logi("Connecting to the device...");
 		final BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
-		BluetoothGatt gatt = device.connectGatt(this, false, normalCallback);
+        serviceCheckActive= true;
+		BluetoothGatt gatt = device.connectGatt(this, false, dfuServiceCheckCallback);
 
 		// We have to wait until the device is connected and services are discovered
 		// Connection error may occur as well.
@@ -850,7 +863,8 @@ public class DfuService extends IntentService {
 		} catch (final InterruptedException e) {
 			loge("Sleeping interrupted", e);
 		}
-		
+
+        serviceCheckActive= false;
 		mConnectionState = STATE_CONNECTING;
 		refreshDeviceCache(gatt);
 		gatt = device.connectGatt(this, false, mGattCallback);

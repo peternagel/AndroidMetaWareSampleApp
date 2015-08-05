@@ -76,10 +76,14 @@
  */
 package no.nordicsemi.android.nrftoolbox.dfu;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.UUID;
 
 import org.apache.http.HttpEntity;
@@ -87,12 +91,12 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.xmlpull.v1.XmlPullParser;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.xmlpull.v1.XmlPullParserException;
-import org.xmlpull.v1.XmlPullParserFactory;
 
-import com.mbientlab.metawear.api.GATT;
 import com.mbientlab.metawear.app.ModuleActivity;
+import com.mbientlab.metawear.app.popup.DeviceAttributeSelector;
 import com.mbientlab.metawear.app.popup.FirmwareVersionSelector;
 import com.mbientlab.metawear.app.R;
 
@@ -143,13 +147,16 @@ import android.widget.Toast;
  * callback when device is selected from scanning dialog The activity supports portrait and landscape orientations
  */
 public class DfuActivity extends FragmentActivity implements LoaderCallbacks<Cursor>, ScannerFragment.OnDeviceSelectedListener, 
-        UploadCancelFragment.CancelFragmetnListener, FirmwareVersionSelector.FirmwareConfiguration {
+        UploadCancelFragment.CancelFragmetnListener, FirmwareVersionSelector.FirmwareConfiguration, DeviceAttributeSelector.DeviceAttribute {
+    private final static UUID METAWEAR_SERVICE= UUID.fromString("326A9000-85CB-9195-D9DD-464CFBBAE75A");
 	private static final String TAG = "DfuActivity";
+    private final static String METAWEAR_BUILD= "vanilla";
 
 	private static final String PREFS_DEVICE_NAME = "no.nordicsemi.android.nrftoolbox.dfu.PREFS_DEVICE_NAME";
 	private static final String PREFS_FILE_NAME = "no.nordicsemi.android.nrftoolbox.dfu.PREFS_FILE_NAME";
 	private static final String PREFS_FILE_SIZE = "no.nordicsemi.android.nrftoolbox.dfu.PREFS_FILE_SIZE";
 
+    private static final String DATA_MODEL_NUMBER= "device_model_number";
 	private static final String DATA_FILE_PATH = "file_path";
 	private static final String DATA_FILE_STREAM = "file_stream";
 	private static final String DATA_STATUS = "status";
@@ -176,7 +183,7 @@ public class DfuActivity extends FragmentActivity implements LoaderCallbacks<Cur
 	private Button[] firmwareButtons;
 
 	private BluetoothDevice mSelectedDevice;
-	private String mFilePath;
+	private String mFilePath, mModelNumber= null;
 	private Uri mFileStreamUri;
 	private boolean mStatusOk;
 
@@ -219,8 +226,15 @@ public class DfuActivity extends FragmentActivity implements LoaderCallbacks<Cur
 			mFileStreamUri = savedInstanceState.getParcelable(DATA_FILE_STREAM);
 			mStatusOk = savedInstanceState.getBoolean(DATA_STATUS);
 			mUploadButton.setEnabled(mStatusOk);
+            mModelNumber= savedInstanceState.getString(DATA_MODEL_NUMBER);
 		}
 		mSelectedDevice= getIntent().getParcelableExtra(ModuleActivity.EXTRA_BLE_DEVICE);
+
+        if (mSelectedDevice != null) {
+            final FragmentManager fm= getSupportFragmentManager();
+            final DeviceAttributeSelector dialog= new DeviceAttributeSelector();
+            dialog.show(fm, "device_attribute_selector");
+        }
 	}
 
 	@Override
@@ -229,6 +243,7 @@ public class DfuActivity extends FragmentActivity implements LoaderCallbacks<Cur
 		outState.putString(DATA_FILE_PATH, mFilePath);
 		outState.putParcelable(DATA_FILE_STREAM, mFileStreamUri);
 		outState.putBoolean(DATA_STATUS, mStatusOk);
+        outState.putString(DATA_MODEL_NUMBER, mModelNumber);
 	}
 
 	private void setGUI() {
@@ -314,7 +329,7 @@ public class DfuActivity extends FragmentActivity implements LoaderCallbacks<Cur
 		case R.id.action_connect:
             final FragmentManager fm = getSupportFragmentManager();
             final ScannerFragment dialog = ScannerFragment.getInstance(this, 
-                    new UUID[] {GATT.GATTService.METAWEAR.uuid(), DfuService.DFU_SERVICE_UUID}, true);
+                    new UUID[] {METAWEAR_SERVICE, DfuService.DFU_SERVICE_UUID}, true);
             dialog.show(fm, "scan_fragment");
             break;
 		case android.R.id.home:
@@ -473,8 +488,22 @@ public class DfuActivity extends FragmentActivity implements LoaderCallbacks<Cur
 			}).show();
 		}
 	}
-	
-	private class CheckFilesTask extends AsyncTask<Uri, Integer, Long> {
+
+    @Override
+    public void selectedModelNumber(String number) {
+        if (mModelNumber == null || !mModelNumber.equals(number)) {
+            mModelNumber = number;
+
+            mFileNameView.setText(null);
+            mFileSizeView.setText(null);
+            mFilePath = null;
+            mFileStreamUri = null;
+            mStatusOk = false;
+            mFileStatusView.setText(R.string.dfu_file_status_no_file);
+        }
+    }
+
+    private class CheckFilesTask extends AsyncTask<Uri, Integer, Long> {
 	    private Uri uri;
         /* (non-Javadoc)
          * @see android.os.AsyncTask#doInBackground(java.lang.Object[])
@@ -514,66 +543,52 @@ public class DfuActivity extends FragmentActivity implements LoaderCallbacks<Cur
 	};
 	
 	public void onUpdateLatestClicked(final View view) {
-        mFileStreamUri= Uri.parse("http://releases.mbientlab.com/metawear/vanilla/latest/firmware.hex");
+        mFileStreamUri= Uri.parse(String.format("http://releases.mbientlab.com/metawear/%s/%s/latest/firmware.hex", mModelNumber, METAWEAR_BUILD));
         new CheckFilesTask().execute(mFileStreamUri);
     }
-	
-	private String artifactPattern;
-	private String[] versions;
+
+	private String[] mVersions;
 	private class GetVersionsTask extends AsyncTask<URL, Integer, String[]> {
 	    @Override
         protected String[] doInBackground(URL... params) {
-	        try {
-	            boolean inDesiredArtifact= false;
-	            String module= "metawear", build= "vanilla", artifact= "", ext= "hex", pattern= "";
-    	        XmlPullParserFactory factory= XmlPullParserFactory.newInstance();
-    	        factory.setNamespaceAware(true);
-    	        XmlPullParser xpp= factory.newPullParser();
-    	        xpp.setInput(params[0].openStream(), "UTF-8");
-    	        
-    	        ArrayList<String> versions= new ArrayList<>();
-    	        
-    	        int eventType = xpp.getEventType();
-    	        while (eventType != XmlPullParser.END_DOCUMENT) {
-    	            if(eventType == XmlPullParser.START_TAG) {
-    	                switch(xpp.getName()) {
-    	                case "publications":
-    	                    pattern= xpp.getAttributeValue(null, "artifactPattern");
-    	                    break;
-    	                case "artifact":
-    	                    inDesiredArtifact= xpp.getAttributeValue(null, "build").equals(build) && 
-    	                            xpp.getAttributeValue(null, "ext").equals(ext);
-    	                    if (inDesiredArtifact) {
-    	                        artifact= xpp.getAttributeValue(null, "name");
-    	                    }
-    	                    break;
-    	                case "release":
-    	                    if (inDesiredArtifact) {
-    	                        versions.add(xpp.getAttributeValue(null, "version"));
-    	                    }
-    	                    break;
-    	                    
-    	                }
-    	            }
-    	            eventType= xpp.next();
-    	        }
-    	        artifactPattern= pattern.replace("[module]", module)
-    	                .replace("[build]", build)
-    	                .replace("[artifact]", artifact)
-    	                .replace("[ext]", ext);
-    	        
-    	        String[] versionArray= new String[versions.size()];
-    	        versions.toArray(versionArray);
-    	        return versionArray;
-	        } catch (XmlPullParserException | IOException e) {
-	            return null;
-	        }
-	        
-	    }
+			try {
+				StringBuilder response= new StringBuilder();
+
+				HttpURLConnection conn = (HttpURLConnection) params[0].openConnection();
+				if(conn.getResponseCode() == HttpURLConnection.HTTP_OK){
+                    BufferedReader in= new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                    String line;
+
+                    while((line= in.readLine()) != null) {
+                        response.append(line);
+                    }
+
+                    JSONObject releaseInfo= new JSONObject(response.toString());
+                    JSONObject buildsInfo= releaseInfo.getJSONObject(mModelNumber);
+                    JSONObject versionsInfo= buildsInfo.getJSONObject(METAWEAR_BUILD);
+
+                    Iterator<String> versionKeys= versionsInfo.keys();
+                    ArrayList<String> versions= new ArrayList<>();
+                    while(versionKeys.hasNext()) {
+                        versions.add(versionKeys.next());
+                    }
+
+                    String[] versionArray= new String[versions.size()];
+                    versions.toArray(versionArray);
+                    return versionArray;
+				} else {
+					return null;
+				}
+			} catch (IOException e) {
+                return null;
+			} catch (JSONException e) {
+                return null;
+            }
+        }
 	    
 	    protected void onPostExecute(final String[] result) {
 	        if (result != null) {
-	            versions= result;
+	            mVersions = result;
 	            
 	            final FragmentManager fm= getSupportFragmentManager();
 	            final FirmwareVersionSelector dialog= new FirmwareVersionSelector();
@@ -584,17 +599,17 @@ public class DfuActivity extends FragmentActivity implements LoaderCallbacks<Cur
 
     @Override
     public void versionSelected(int index) {
-        mFileStreamUri= Uri.parse(String.format("http://releases.mbientlab.com/%s", artifactPattern.replace("[version]", versions[index])));
+        mFileStreamUri= Uri.parse(String.format("http://releases.mbientlab.com/metawear/%s/%s/%s/firmware.hex", mModelNumber, METAWEAR_BUILD, mVersions[index]));
         new CheckFilesTask().execute(mFileStreamUri);
     }
 
     @Override
     public String[] availableVersions() {
-        return versions;
+        return mVersions;
     }
     
 	public void onChooseVersionClicked(final View view) throws XmlPullParserException, IOException {
-	    URL modulesXml= new URL("http://releases.mbientlab.com/metawear/module.xml");
+	    URL modulesXml= new URL("http://releases.mbientlab.com/metawear/info.json");
 	    new GetVersionsTask().execute(modulesXml);
 	}
 
@@ -639,7 +654,7 @@ public class DfuActivity extends FragmentActivity implements LoaderCallbacks<Cur
         if (mSelectedDevice == null) {
             final FragmentManager fm = getSupportFragmentManager();
             final ScannerFragment dialog = ScannerFragment.getInstance(DfuActivity.this, 
-                    new UUID[] {GATT.GATTService.METAWEAR.uuid(), DfuService.DFU_SERVICE_UUID}, true);
+                    new UUID[] {METAWEAR_SERVICE, DfuService.DFU_SERVICE_UUID}, true);
             dialog.show(fm, "scan_fragment");
         }
     }
@@ -747,6 +762,10 @@ public class DfuActivity extends FragmentActivity implements LoaderCallbacks<Cur
 		mSelectedDevice = device;
 		mUploadButton.setEnabled(mStatusOk);
 		mDeviceNameView.setText(name);
+
+        final FragmentManager fm= getSupportFragmentManager();
+        final DeviceAttributeSelector dialog= new DeviceAttributeSelector();
+        dialog.show(fm, "device_attribute_selector");
 	}
 
 	@Override

@@ -43,7 +43,6 @@ import android.view.MenuItem;
  * side-by-side with a list of items in a {@link ModuleListActivity}.
  * <p>
  * This activity is mostly just a 'shell' activity containing nothing more than
- * a {@link ModuleDetailFragment}.
  */
 public class ModuleDetailActivity extends ModuleActivity {
 
@@ -86,8 +85,8 @@ public class ModuleDetailActivity extends ModuleActivity {
             if (fragStates.containsKey(id)) {
                 moduleFragment.setInitialSavedState(fragStates.get(id));
             }
-            if (mwController != null) {
-                moduleFragment.controllerReady(mwController);
+            if (currentBoard != null && currentBoard.isConnected()) {
+                moduleFragment.connected(currentBoard);
             }
             getSupportFragmentManager().beginTransaction()
                     .replace(R.id.module_detail_container, moduleFragment).commit();

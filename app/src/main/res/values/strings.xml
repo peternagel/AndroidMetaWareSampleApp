@@ -178,7 +178,6 @@ contact MbientLab Inc, at www.mbientlab.com.
     <string name="label_gpio_digital_input">Digital Input</string>
     <string name="label_gpio_pull_mode">Pull Mode</string>
     <string name="label_gpio_digital_output">Digital Output</string>
-    <string name="label_gpio_firmware">Older than 1.0.0</string>
     <string name="label_gpio_read">Read</string>
     <string name="label_gpio_value">Value</string>
     

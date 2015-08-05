@@ -30,7 +30,7 @@
  */
 package com.mbientlab.metawear.app;
 
-import com.mbientlab.metawear.api.MetaWearBleService;
+import com.mbientlab.metawear.MetaWearBleService;
 
 import android.app.Activity;
 import android.content.ComponentName;
@@ -48,7 +48,6 @@ import android.widget.ListView;
  * A list fragment representing a list of Modules. This fragment also supports
  * tablet devices by allowing list items to be given an 'activated' state upon
  * selection. This helps indicate which item is currently being viewed in a
- * {@link ModuleDetailFragment}.
  * <p>
  * Activities containing this fragment MUST implement the {@link Callbacks}
  * interface.

@@ -47,7 +47,6 @@ import android.support.v4.app.FragmentTransaction;
  * <p>
  * The activity makes heavy use of fragments. The list of items is a
  * {@link ModuleListFragment} and the item details (if present) is a
- * {@link ModuleDetailFragment}.
  * <p>
  * This activity also implements the required
  * {@link ModuleListFragment.Callbacks} interface to listen for item selections.
@@ -106,14 +105,14 @@ public class ModuleListActivity extends ModuleActivity implements ModuleListFrag
                 } catch (InstantiationException | IllegalAccessException
                         | IllegalArgumentException | InvocationTargetException
                         | NoSuchMethodException e) {
-                    throw new RuntimeException("Cannot instantiate frament", e);
+                    throw new RuntimeException("Cannot instantiate fragment", e);
                 }
                 transaction.add(R.id.module_detail_container, moduleFragment, id);
             }
-            if (mwController != null) {
-                moduleFragment.controllerReady(mwController);
-            }
             transaction.attach(moduleFragment).commit();
+            if (currentBoard != null && currentBoard.isConnected()) {
+                moduleFragment.connected(currentBoard);
+            }
         } else {
             // In single-pane mode, simply start the detail activity
             // for the selected item ID.

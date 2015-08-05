@@ -30,15 +30,14 @@
  */
 package com.mbientlab.metawear.app;
 
+import com.mbientlab.metawear.AsyncOperation;
+import com.mbientlab.metawear.MetaWearBoard;
+import com.mbientlab.metawear.UnsupportedModuleException;
+import com.mbientlab.metawear.module.IBeacon;
+
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.UUID;
-
-import com.mbientlab.metawear.api.MetaWearController;
-import com.mbientlab.metawear.api.Module;
-import com.mbientlab.metawear.api.MetaWearController.DeviceCallbacks;
-import com.mbientlab.metawear.api.controller.IBeacon;
 
 import android.os.Bundle;
 import android.text.Editable;
@@ -55,94 +54,8 @@ import android.widget.Toast;
  *
  */
 public class IBeaconFragment extends ModuleFragment {
-    private IBeacon ibeaconController;
-    private IBeacon.Callbacks mCallbacks= new IBeacon.Callbacks() {
-        @Override
-        public void receivedEnableState(byte state) {
-            // TODO Auto-generated method stub
-            super.receivedEnableState(state);
-        }
-
-        @Override
-        public void receivedUUID(UUID uuid) {
-            values.put(R.id.editText1, uuid.toString());
-            if (isVisible()) {
-                ((EditText) getView().findViewById(R.id.editText1)).setText(uuid.toString());
-            }
-        }
-
-        @Override
-        public void receivedMajor(short value) {
-            values.put(R.id.editText2, String.format("%d", value));
-            if (isVisible()) {
-                ((EditText) getView().findViewById(R.id.editText2)).setText(String.format("%d", value));
-            }
-        }
-
-        @Override
-        public void receivedMinor(short value) {
-            values.put(R.id.editText3, String.format("%d", value));
-            if (isVisible()) {
-                ((EditText) getView().findViewById(R.id.editText3)).setText(String.format("%d", value));
-            }
-        }
-
-        @Override
-        public void receivedRXPower(byte power) {
-            values.put(R.id.editText4, String.format("%d", power));
-            if (isVisible()) {
-                ((EditText) getView().findViewById(R.id.editText4)).setText(String.format("%d", power));
-            }
-        }
-
-        @Override
-        public void receivedTXPower(byte power) {
-            values.put(R.id.editText5, String.format("%d", power));
-            if (isVisible()) {
-                ((EditText) getView().findViewById(R.id.editText5)).setText(String.format("%d", power));
-            }
-        }
-
-        @Override
-        public void receivedPeriod(short period) {
-            values.put(R.id.editText6, String.format("%d", period));
-            if (isVisible()) {
-                ((EditText) getView().findViewById(R.id.editText6)).setText(String.format("%d", period));
-            }
-        }
-    
-    };
-    private DeviceCallbacks dCallback= new MetaWearController.DeviceCallbacks() {
-        @Override
-        public void connected() {
-            for(IBeacon.Register it: IBeacon.Register.values()) {
-                ibeaconController.readSetting(it);
-            }
-        }
-        
-        @Override
-        public void disconnected() {
-            final View view= getView();
-            for(Integer it: editTextBoxes) {
-                if (view != null) {
-                    ((EditText) view.findViewById(it)).setText("");
-                }
-                values.put(it, "");
-            }
-        }
-    };
+    private IBeacon ibeaconController= null;
     private HashMap<Integer, String> values= new HashMap<>();
-    
-    private static final HashSet<Integer> editTextBoxes;
-    static {
-        editTextBoxes= new HashSet<>();
-        editTextBoxes.add(R.id.editText1);
-        editTextBoxes.add(R.id.editText2);
-        editTextBoxes.add(R.id.editText3);
-        editTextBoxes.add(R.id.editText4);
-        editTextBoxes.add(R.id.editText5);
-        editTextBoxes.add(R.id.editText6); 
-    }
     
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -156,21 +69,25 @@ public class IBeaconFragment extends ModuleFragment {
         if (savedInstanceState != null) {
             values= (HashMap<Integer, String>) savedInstanceState.getSerializable("STATE_VALUES");
         }
-        for(Entry<Integer, String> it: values.entrySet()) {
-            ((EditText) view.findViewById(it.getKey())).setText(it.getValue());
+        if (values != null) {
+            for(Entry<Integer, String> it: values.entrySet()) {
+                ((EditText) view.findViewById(it.getKey())).setText(it.getValue());
+            }
         }
-        ((Button) view.findViewById(R.id.button1)).setOnClickListener(new Button.OnClickListener() {
+        view.findViewById(R.id.button1).setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mwMnger.controllerReady()) {
+                if (currBoard != null && currBoard.isConnected()) {
                     try {
-                        ibeaconController.setUUID(UUID.fromString(values.get(R.id.editText1)))
+                        IBeacon.ConfigEditor editor = ibeaconController.configure();
+                        editor.setUUID(UUID.fromString(values.get(R.id.editText1)))
                                 .setMajor(Short.parseShort(values.get(R.id.editText2)))
                                 .setMinor(Short.parseShort(values.get(R.id.editText3)))
-                                .setCalibratedRXPower(Byte.parseByte(values.get(R.id.editText4)))
-                                .setTXPower(Byte.parseByte(values.get(R.id.editText5)))
-                                .setAdvertisingPeriod(Short.parseShort(values.get(R.id.editText6)))
-                                .enableIBeacon();
+                                .setRxPower(Byte.parseByte(values.get(R.id.editText4)))
+                                .setTxPower(Byte.parseByte(values.get(R.id.editText5)))
+                                .setAdPeriod(Short.parseShort(values.get(R.id.editText6)))
+                                .commit();
+                        ibeaconController.enable();
                     } catch (Exception ex) {
                         Toast.makeText(getActivity(), ex.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
                     }
@@ -179,11 +96,11 @@ public class IBeaconFragment extends ModuleFragment {
                 }
             }
         });
-        ((Button) view.findViewById(R.id.button2)).setOnClickListener(new Button.OnClickListener() {
+        view.findViewById(R.id.button2).setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mwMnger.controllerReady()) {
-                    ibeaconController.disableIBecon();
+                if (currBoard != null && currBoard.isConnected()) {
+                    ibeaconController.disable();
                 } else {
                     Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
                 }
@@ -208,31 +125,41 @@ public class IBeaconFragment extends ModuleFragment {
             });
         }
     }
-    
+
+    private MetaWearBoard currBoard;
     @Override
-    public void controllerReady(MetaWearController mwController) {
-        ibeaconController= (IBeacon) mwController.getModuleController(Module.IBEACON);
-        mwController.addModuleCallback(mCallbacks);
-        mwController.addDeviceCallback(dCallback);
-        
-        if (mwController.isConnected()) {
-            for(IBeacon.Register it: IBeacon.Register.values()) {
-                ibeaconController.readSetting(it);
-            }
+    public void connected(MetaWearBoard currBoard) {
+        this.currBoard= currBoard;
+
+        try {
+            ibeaconController= currBoard.getModule(IBeacon.class);
+            ibeaconController.readConfiguration().onComplete(new AsyncOperation.CompletionHandler<IBeacon.Configuration>() {
+                @Override
+                public void success(IBeacon.Configuration result) {
+                    values.put(R.id.editText1, result.adUuid().toString());
+                    values.put(R.id.editText2, String.format("%d", result.major()));
+                    values.put(R.id.editText3, String.format("%d", result.minor()));
+                    values.put(R.id.editText4, String.format("%d", result.rxPower()));
+                    values.put(R.id.editText5, String.format("%d", result.txPower()));
+                    values.put(R.id.editText6, String.format("%d", result.adPeriod()));
+
+                    if (isVisible()) {
+                        for(Entry<Integer, String> it: values.entrySet()) {
+                            ((EditText) getView().findViewById(it.getKey())).setText(it.getValue());
+                        }
+                    }
+                }
+            });
+        } catch (UnsupportedModuleException e) {
+            Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
         }
     }
-    
+
     @Override
-    public void onDestroy() {
-        final MetaWearController mwController= mwMnger.getCurrentController();
-        if (mwMnger.hasController()) {
-            mwController.removeModuleCallback(mCallbacks);
-            mwController.removeDeviceCallback(dCallback);
-        }
-        
-        super.onDestroy();
+    public void disconnected() {
+
     }
-    
+
     @Override
     public void onResume () {
         super.onResume();

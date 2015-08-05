@@ -35,9 +35,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.UUID;
 
-import com.mbientlab.metawear.api.GATT;
-import com.mbientlab.metawear.api.MetaWearBleService;
-import com.mbientlab.metawear.api.MetaWearController;
+import com.mbientlab.metawear.MetaWearBoard;
+import com.mbientlab.metawear.MetaWearBleService;
 
 import no.nordicsemi.android.nrftoolbox.AppHelpFragment;
 import no.nordicsemi.android.nrftoolbox.dfu.DfuActivity;
@@ -47,7 +46,6 @@ import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -67,15 +65,16 @@ import android.widget.Toast;
  */
 public class ModuleActivity extends FragmentActivity implements ScannerFragment.OnDeviceSelectedListener, 
         ModuleFragment.MetaWearManager, ServiceConnection, AccelerometerFragment.Configuration {
-    public static final String EXTRA_BLE_DEVICE= 
-            "com.mbientlab.metawear.app.ModuleActivity.EXTRA_BLE_DEVICE";
+    private final static UUID METAWEAR_SERVICE= UUID.fromString("326A9000-85CB-9195-D9DD-464CFBBAE75A");
+    public static final String EXTRA_BLE_DEVICE= "com.mbientlab.metawear.app.ModuleActivity.EXTRA_BLE_DEVICE";
+    public static final String EXTRA_MODEL_NUMBER= "com.mbientlab.metawear.app.ModuleActivity.EXTRA_MODEL_NUMBER";
     protected static final String ARG_ITEM_ID = "item_id";
 
     private static final int DFU = 0;
     private static final int REQUEST_ENABLE_BT= 1;
     protected static final int START_MODULE_DETAIL= 2;
     protected static BluetoothDevice device;
-    
+
     @SuppressWarnings("unchecked")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -92,18 +91,14 @@ public class ModuleActivity extends FragmentActivity implements ScannerFragment.
                 this, Context.BIND_AUTO_CREATE);
         
         if (savedInstanceState != null) {
-            device= (BluetoothDevice) savedInstanceState.getParcelable(EXTRA_BLE_DEVICE);
+            device= savedInstanceState.getParcelable(EXTRA_BLE_DEVICE);
             moduleFragment= (ModuleFragment) getSupportFragmentManager().getFragment(savedInstanceState, "mContent");
             
             tapType= savedInstanceState.getInt(Extra.TAP_TYPE);
             tapAxis= savedInstanceState.getInt(Extra.TAP_AXIS);
             shakeAxis= savedInstanceState.getInt(Extra.SHAKE_AXIS);
-            dataRange= savedInstanceState.getInt(Extra.DATA_RANGE);
-            samplingRate= savedInstanceState.getInt(Extra.SAMPLING_RATE);
             ffMovement= savedInstanceState.getBoolean(Extra.FF_MOVEMENT);
-            newFirmware= savedInstanceState.getBoolean(Extra.NEW_FIRMWARE);
-            samplingConfigBytes= savedInstanceState.getByteArray(Extra.SAMPLING_CONFIG_BYTES);
-            polledData= (ArrayList<byte []>) savedInstanceState.getSerializable(Extra.POLLED_DATA);
+            polledData= (ArrayList<float[]>) savedInstanceState.getSerializable(Extra.POLLED_DATA);
         }
     }
 
@@ -114,7 +109,7 @@ public class ModuleActivity extends FragmentActivity implements ScannerFragment.
         case DFU:
             device= data.getParcelableExtra(EXTRA_BLE_DEVICE);
             if (device != null) {
-                mwController= mwService.getMetaWearController(device);
+                currentBoard= serviceBinder.getMetaWearBoard(device);
             }
             break;
         case REQUEST_ENABLE_BT:
@@ -131,33 +126,38 @@ public class ModuleActivity extends FragmentActivity implements ScannerFragment.
      */
     @Override
     public void onDeviceSelected(BluetoothDevice device, String name) {
-        if (mwController != null && mwController.isConnected()) {
-            mwController.close(true);
-            mwController= null;
+        if (currentBoard != null && currentBoard.isConnected()) {
+            currentBoard.disconnect();
+            currentBoard= null;
         }
         
         ModuleActivity.device= device;
-        
-        mwController= mwService.getMetaWearController(device);
-        mwController.addDeviceCallback(new MetaWearController.DeviceCallbacks() {
+
+        currentBoard= serviceBinder.getMetaWearBoard(device);
+        currentBoard.setConnectionStateHandler(new MetaWearBoard.ConnectionStateHandler() {
             @Override
             public void connected() {
                 Toast.makeText(ModuleActivity.this, R.string.text_connected, Toast.LENGTH_SHORT).show();
+
+                if (moduleFragment != null) {
+                    moduleFragment.connected(currentBoard);
+                }
             }
 
             @Override
             public void disconnected() {
                 Toast.makeText(ModuleActivity.this, R.string.text_lost_connection, Toast.LENGTH_SHORT).show();
-                if (ModuleActivity.device != null && mwController != null) {
-                    mwController.reconnect(false);
+
+                if (moduleFragment != null) {
+                    moduleFragment.disconnected();
+                }
+
+                if (ModuleActivity.device != null && currentBoard != null) {
+                    currentBoard.connect();
                 }
             }
         });
-        
-        if (moduleFragment != null) {
-            moduleFragment.controllerReady(mwController);
-        }
-        mwController.connect();
+        currentBoard.connect();
     }
 
     /* (non-Javadoc)
@@ -174,11 +174,12 @@ public class ModuleActivity extends FragmentActivity implements ScannerFragment.
      */
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
-        mwService= ((MetaWearBleService.LocalBinder) service).getService();
+        serviceBinder= (MetaWearBleService.LocalBinder) service;
+        serviceBinder.executeOnUiThread();
         if (device != null) {
-            mwController= mwService.getMetaWearController(device);
-            if (moduleFragment != null) {
-                moduleFragment.controllerReady(mwController);
+            currentBoard= serviceBinder.getMetaWearBoard(device);
+            if (moduleFragment != null && currentBoard.isConnected()) {
+                moduleFragment.connected(currentBoard);
             }
         }
     }
@@ -198,40 +199,26 @@ public class ModuleActivity extends FragmentActivity implements ScannerFragment.
         getApplicationContext().unbindService(this);
     }
     
-    
-    private final BroadcastReceiver metaWearUpdateReceiver= MetaWearBleService.getMetaWearBroadcastReceiver();
-    protected MetaWearBleService mwService;
-    protected MetaWearController mwController;
+
+    protected MetaWearBleService.LocalBinder serviceBinder;
+    protected MetaWearBoard currentBoard;
     protected ModuleFragment moduleFragment;
     protected static HashMap<String, Fragment.SavedState> fragStates= new HashMap<>();
-    
-    @Override
-    protected void onResume() {
-        super.onResume();
-        registerReceiver(metaWearUpdateReceiver, MetaWearBleService.getMetaWearIntentFilter());
-    }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        unregisterReceiver(metaWearUpdateReceiver);
-    }
-    
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
         case R.id.ble_connect:
             final FragmentManager fm = getSupportFragmentManager();
             final ScannerFragment dialog = ScannerFragment.getInstance(ModuleActivity.this, 
-                    new UUID[] {GATT.GATTService.METAWEAR.uuid(), DfuService.DFU_SERVICE_UUID}, true);
+                    new UUID[] {METAWEAR_SERVICE, DfuService.DFU_SERVICE_UUID}, true);
             dialog.show(fm, "scan_fragment");
             break;
         case R.id.ble_disconnect:
-            if (mwController != null) {
+            if (currentBoard != null) {
                 device= null;
-                mwController.setRetainState(false);
-                mwController.close(true);
-                mwController= null;
+                currentBoard.disconnect();
+                currentBoard= null;
             }
             break;
         case R.id.metawear_dfu:
@@ -266,21 +253,17 @@ public class ModuleActivity extends FragmentActivity implements ScannerFragment.
         outState.putInt(Extra.TAP_TYPE, tapType);
         outState.putInt(Extra.TAP_AXIS, tapAxis);
         outState.putInt(Extra.SHAKE_AXIS, shakeAxis);
-        outState.putInt(Extra.DATA_RANGE, dataRange);
-        outState.putInt(Extra.SAMPLING_RATE, samplingRate);
         outState.putBoolean(Extra.FF_MOVEMENT, ffMovement);
-        outState.putBoolean(Extra.NEW_FIRMWARE, newFirmware);
-        outState.putByteArray(Extra.SAMPLING_CONFIG_BYTES, samplingConfigBytes);
         outState.putSerializable(Extra.POLLED_DATA, polledData);
     }
     @Override
-    public MetaWearController getCurrentController() {
-        return mwController;
+    public MetaWearBoard getCurrentController() {
+        return currentBoard;
     }
     
     @Override
     public boolean hasController() {
-        return mwController != null;
+        return currentBoard != null;
     }
     
 
@@ -289,7 +272,7 @@ public class ModuleActivity extends FragmentActivity implements ScannerFragment.
      */
     @Override
     public boolean controllerReady() {
-        return hasController() && mwController.isConnected();
+        return hasController() && currentBoard.isConnected();
     }
 
     private class Extra {
@@ -299,77 +282,50 @@ public class ModuleActivity extends FragmentActivity implements ScannerFragment.
                 "com.mbientlab.metawear.app.ModuleActivity.Extra.TAP_AXIS";
         public static final String SHAKE_AXIS= 
                 "com.mbientlab.metawear.app.ModuleActivity.Extra.SHAKE_AXIS";
-        public static final String DATA_RANGE= 
-                "com.mbientlab.metawear.app.ModuleActivity.Extra.DATA_RANGE";
-        public static final String SAMPLING_RATE= 
-                "com.mbientlab.metawear.app.ModuleActivity.Extra.SAMPLING_RATE";
         public static final String FF_MOVEMENT= 
                 "com.mbientlab.metawear.app.ModuleActivity.Extra.FF_MOVEMENT";
-        public static final String NEW_FIRMWARE= 
-                "com.mbientlab.metawear.app.ModuleActivity.Extra.NEW_FIRMWARE";
-        public static final String SAMPLING_CONFIG_BYTES= 
-                "com.mbientlab.metawear.app.ModuleActivity.Extra.SAMPLING_CONFIG_BYTES";
         public static final String POLLED_DATA= 
                 "com.mbientlab.metawear.app.ModuleActivity.Extra.POLLED_DATA";
     }
-    
-    private ArrayList<byte []> polledData;
-    private byte[] samplingConfigBytes;
-    private int tapType= 0, tapAxis= 2, shakeAxis= 0, dataRange= 2, samplingRate= 3;
-    private boolean ffMovement= true, newFirmware= true;
-    
-    public int tapTypePos() { return tapType; }
-    public int tapAxisPos() { return tapAxis; }
-    public int movementPos() { return ffMovement ? 0 : 1; }
-    public int shakeAxisPos() { return shakeAxis; }
-    public int fsrPos() { return dataRange; }
-    public int odrPos() { return samplingRate; }
-    public int firmwarePos() { return newFirmware ? 0 : 1; }
 
+    private ArrayList<float[]> polledData;
+    private int tapType= 0, tapAxis= 2, shakeAxis= 0;
+    private boolean ffMovement= true;
+
+    @Override
+    public int tapTypePos() { return tapType; }
+    @Override
+    public int tapAxisPos() { return tapAxis; }
+    @Override
+    public int movementPos() { return ffMovement ? 0 : 1; }
+    @Override
+    public int shakeAxisPos() { return shakeAxis; }
+
+    @Override
     public void modifyTapType(int newIndex) {
         tapType= newIndex;
     }
+    @Override
     public void modifyTapAxis(int newIndex) {
         tapAxis= newIndex;
     }
+    @Override
     public void modifyShakeAxis(int newIndex) {
         shakeAxis= newIndex;
     }
+    @Override
     public void modifyMovementType(int newIndex) {
         ffMovement= newIndex == 0;
     }
-    public void modifyDataRange(int newIndex) {
-        dataRange= newIndex;
-    }
-    public void modifySamplingRate(int newIndex) {
-        samplingRate= newIndex;
-    }
-    public void modifyFirmwareVersion(int newIndex) {
-        newFirmware= newIndex == 0;
-    }
 
-    /* (non-Javadoc)
-     * @see com.mbientlab.metawear.app.AccelerometerFragment.SamplingData#polledBytes()
-     */
     @Override
-    public Collection<byte[]> polledBytes() {
+    public Collection<float[]> polledBytes() {
         return polledData;
     }
 
-    /* (non-Javadoc)
-     * @see com.mbientlab.metawear.app.AccelerometerFragment.SamplingData#getSamplingConfig()
-     */
-    @Override
-    public byte[] getSamplingConfig() {
-        return samplingConfigBytes;
-    }
 
-    /* (non-Javadoc)
-     * @see com.mbientlab.metawear.app.AccelerometerFragment.SamplingData#setSamplingConfig(byte[])
-     */
     @Override
-    public void initialize(byte[] config) {
-        samplingConfigBytes= config;
+    public void initialize() {
         polledData= new ArrayList<>();
     }
 }

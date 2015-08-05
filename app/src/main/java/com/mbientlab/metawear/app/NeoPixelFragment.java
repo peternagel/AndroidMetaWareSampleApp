@@ -33,15 +33,6 @@ package com.mbientlab.metawear.app;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import com.mbientlab.metawear.api.MetaWearController;
-import com.mbientlab.metawear.api.MetaWearController.ModuleCallbacks;
-import com.mbientlab.metawear.api.Module;
-import com.mbientlab.metawear.api.MetaWearController.DeviceCallbacks;
-import com.mbientlab.metawear.api.controller.NeoPixel;
-import com.mbientlab.metawear.api.controller.NeoPixel.ColorOrdering;
-import com.mbientlab.metawear.api.controller.NeoPixel.RotationDirection;
-import com.mbientlab.metawear.api.controller.NeoPixel.StrandSpeed;
-
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
@@ -56,6 +47,10 @@ import android.widget.Spinner;
 import android.widget.Toast;
 import android.widget.AdapterView.OnItemSelectedListener;
 
+import com.mbientlab.metawear.MetaWearBoard;
+import com.mbientlab.metawear.UnsupportedModuleException;
+import com.mbientlab.metawear.module.NeoPixel;
+
 /**
  * @author etsai
  *
@@ -63,52 +58,62 @@ import android.widget.AdapterView.OnItemSelectedListener;
 public class NeoPixelFragment extends ModuleFragment {
     private TimerTask[] pulsateTasks= {null, null, null};
     private Timer npTimer;
-    private NeoPixel neoPixelController;
     
     private byte strand= 0;
     private int presetIndex;
-    
+    private MetaWearBoard currBoard;
+
+    @Override
+    public void connected(MetaWearBoard currBoard) {
+        this.currBoard= currBoard;
+    }
+
+    @Override
+    public void disconnected() {
+
+    }
+
     private interface Preset {
-        public void setPattern();
+        void setPattern(NeoPixel neoPixelModule);
     }
 
     private Preset[] patternPresets= {
         new Preset() {
             @Override
-            public void setPattern() {
+            public void setPattern(NeoPixel neoPixelModule) {
                 byte nLEDs= Byte.parseByte(nLEDsText.getEditableText().toString()), currStrand= strand;
-                
-                neoPixelController.holdStrand(currStrand, (byte) 1);
+
+                neoPixelModule.holdStrand(currStrand);
                 for(byte i= 0; i < nLEDs; i++) {
-                    neoPixelController.setPixel(currStrand, i, (byte)0, (byte)-1, (byte)0);
+                    neoPixelModule.setPixel(currStrand, i, (byte)0, (byte)-1, (byte)0);
                 }
-                neoPixelController.holdStrand(currStrand, (byte) 0);
+                neoPixelModule.releaseHold(currStrand);
             }
         },
         new Preset() {
             @Override
-            public void setPattern() {
+            public void setPattern(NeoPixel neoPixelModule) {
                 byte nLEDs= Byte.parseByte(nLEDsText.getEditableText().toString()), currStrand= strand;
                 double delta= 2 * Math.PI / nLEDs;
-                
-                neoPixelController.holdStrand(currStrand, (byte) 1);
+
+                neoPixelModule.holdStrand(currStrand);
                 for(byte i= 0; i < nLEDs; i++) {
                     double step= i * delta;
                     double rRatio= Math.cos(step),
                             gRatio= Math.cos(step + 2*Math.PI/3),
                             bRatio= Math.cos(step + 4*Math.PI/3);
-                    neoPixelController.setPixel(currStrand, i, (byte)((rRatio < 0 ? 0 : rRatio) * 255), 
+                    neoPixelModule.setPixel(currStrand, i, (byte)((rRatio < 0 ? 0 : rRatio) * 255),
                             (byte)((gRatio < 0 ? 0 : gRatio) * 255), 
                             (byte)((bRatio < 0 ? 0 : bRatio) * 255));
                 }
-                neoPixelController.holdStrand(currStrand, (byte) 0);
+                neoPixelModule.releaseHold(currStrand);
             }
         },
         new Preset() {
             private final long period= 20;
             private long time= -period;
             @Override
-            public void setPattern() {
+            public void setPattern(final NeoPixel neoPixelModule) {
                 final byte currStrand= strand;
                 pulsateTasks[currStrand]= new TimerTask() {
                     @Override
@@ -118,8 +123,8 @@ public class NeoPixelFragment extends ModuleFragment {
                         double rRatio= Math.cos(seconds),
                                 gRatio= Math.cos(seconds + 2*Math.PI/3),
                                 bRatio= Math.cos(seconds + 4*Math.PI/3);
-                        
-                        neoPixelController.setPixel(currStrand, (byte)0, (byte)((rRatio < 0 ? 0 : rRatio) * 255), 
+
+                        neoPixelModule.setPixel(currStrand, (byte)0, (byte)((rRatio < 0 ? 0 : rRatio) * 255),
                                 (byte)((gRatio < 0 ? 0 : gRatio) * 255), 
                                 (byte)((bRatio < 0 ? 0 : bRatio) * 255));
                     }
@@ -131,7 +136,7 @@ public class NeoPixelFragment extends ModuleFragment {
             private byte index= 0, count= -1;
             private long period= 1000;
             @Override
-            public void setPattern() {
+            public void setPattern(final NeoPixel neoPixelModule) {
                 final byte nLEDs= Byte.parseByte(nLEDsText.getEditableText().toString());
                 final byte currStrand= strand;
                 pulsateTasks[currStrand]= new TimerTask() {
@@ -139,16 +144,16 @@ public class NeoPixelFragment extends ModuleFragment {
                     public void run() {
                         count++;
                         if (count >= 3) {
-                            neoPixelController.clearStrand(currStrand, index, index);
+                            neoPixelModule.clearStrand(currStrand, index, index);
                             index++;
                             if (index >= nLEDs) {
                                 index= 0;
                             }
                             count= 0;
                         }
-                        neoPixelController.setPixel(currStrand, index, (byte)(count == 0 ? 255 : 0), 
-                                (byte)(count == 1 ? 255 : 0), 
-                                (byte)(count == 2 ? 255 : 0));
+                        neoPixelModule.setPixel(currStrand, index, (byte) (count == 0 ? 255 : 0),
+                                (byte) (count == 1 ? 255 : 0),
+                                (byte) (count == 2 ? 255 : 0));
                     }
                 };
                 npTimer.schedule(pulsateTasks[currStrand], 0, period);
@@ -162,13 +167,6 @@ public class NeoPixelFragment extends ModuleFragment {
             pulsateTasks[strand].cancel();
             pulsateTasks[strand]= null;
             npTimer.purge();
-        }
-    }
-    
-    private void readNeoState() {
-        if (neoPixelController != null) {
-            neoPixelController.readStrandState(strand);
-            neoPixelController.readRotationState(strand);
         }
     }
     
@@ -189,13 +187,12 @@ public class NeoPixelFragment extends ModuleFragment {
             public void onItemSelected(AdapterView<?> parent, View view,
                     int position, long id) {
                 strand= (byte)position;
-                readNeoState();
             }
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) { }
         });
-        strandSpinner.setAdapter(new ArrayAdapter<Integer>(getActivity(),
+        strandSpinner.setAdapter(new ArrayAdapter<>(getActivity(),
                 R.layout.command_row, R.id.command_name, new Integer[] {0, 1, 2}));
         
         final Spinner presetSpinner= (Spinner) view.findViewById(R.id.spinner1);
@@ -209,7 +206,7 @@ public class NeoPixelFragment extends ModuleFragment {
             @Override
             public void onNothingSelected(AdapterView<?> parent) { }
         });
-        presetSpinner.setAdapter(new ArrayAdapter<String>(getActivity(), 
+        presetSpinner.setAdapter(new ArrayAdapter<>(getActivity(),
                 R.layout.command_row, R.id.command_name, patternNames));
         
         final Button playButton= (Button) view.findViewById(R.id.button2);
@@ -217,8 +214,13 @@ public class NeoPixelFragment extends ModuleFragment {
             @Override
             public void onClick(View v) {
                 resetTimer();
-                if (mwMnger.controllerReady()) {
-                    patternPresets[presetIndex].setPattern();
+                if (currBoard != null && currBoard.isConnected()) {
+                    try {
+                        NeoPixel neoPixelController = currBoard.getModule(NeoPixel.class);
+                        patternPresets[presetIndex].setPattern(neoPixelController);
+                    } catch (UnsupportedModuleException e) {
+                        Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                    }
                 } else {
                     Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
                 }
@@ -230,9 +232,14 @@ public class NeoPixelFragment extends ModuleFragment {
             @Override
             public void onClick(View v) {
                 resetTimer();
-                if (mwMnger.controllerReady()) {
-                    neoPixelController.clearStrand(strand, (byte)0, 
-                            Byte.parseByte(nLEDsText.getEditableText().toString()));
+                if (currBoard != null && currBoard.isConnected()) {
+                    try {
+                        NeoPixel neoPixelController= currBoard.getModule(NeoPixel.class);
+                        neoPixelController.clearStrand(strand, (byte)0, Byte.parseByte(nLEDsText.getEditableText().toString()));
+                    } catch (UnsupportedModuleException e) {
+                        Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                    }
+
                 } else {
                     Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
                 }
@@ -243,12 +250,19 @@ public class NeoPixelFragment extends ModuleFragment {
         initializeButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mwMnger.controllerReady()) {
+                if (currBoard != null && currBoard.isConnected()) {
                     try {
-                        byte gpioPin= Byte.parseByte(gpioPinText.getEditableText().toString()), 
-                                nLEDs= Byte.parseByte(nLEDsText.getEditableText().toString());
-                        neoPixelController.initializeStrand(strand, ColorOrdering.values[orderingSpinner.getSelectedItemPosition()], 
-                                StrandSpeed.values[speedSpinner.getSelectedItemPosition()], gpioPin, nLEDs);
+                        try {
+                            NeoPixel neoPixelController= currBoard.getModule(NeoPixel.class);
+                            byte gpioPin= Byte.parseByte(gpioPinText.getEditableText().toString()),
+                                    nLEDs= Byte.parseByte(nLEDsText.getEditableText().toString());
+                            neoPixelController.initializeStrand(strand, NeoPixel.ColorOrdering.values()[orderingSpinner.getSelectedItemPosition()],
+                                    NeoPixel.StrandSpeed.values()[speedSpinner.getSelectedItemPosition()], gpioPin, nLEDs);
+                        } catch (UnsupportedModuleException e) {
+                            Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                        }
+
+
                     } catch (Exception ex) {
                         Toast.makeText(getActivity(), ex.getLocalizedMessage(), Toast.LENGTH_LONG).show();
                     }
@@ -261,8 +275,13 @@ public class NeoPixelFragment extends ModuleFragment {
         freeButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mwMnger.controllerReady()) {
-                    neoPixelController.deinitializeStrand(strand);
+                if (currBoard != null && currBoard.isConnected()) {
+                    try {
+                        NeoPixel neoPixelController = currBoard.getModule(NeoPixel.class);
+                        neoPixelController.deinitializeStrand(strand);
+                    } catch (UnsupportedModuleException e) {
+                        Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                    }
                 } else {
                     Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
                 }
@@ -274,26 +293,30 @@ public class NeoPixelFragment extends ModuleFragment {
         
         //StrandSpeed
         speedSpinner= (Spinner) view.findViewById(R.id.spinner2);
-        speedSpinner.setAdapter(new ArrayAdapter<StrandSpeed>(getActivity(), 
-                R.layout.command_row, R.id.command_name, StrandSpeed.values));
+        speedSpinner.setAdapter(new ArrayAdapter<>(getActivity(),
+                R.layout.command_row, R.id.command_name, NeoPixel.StrandSpeed.values()));
         
         orderingSpinner= (Spinner) view.findViewById(R.id.spinner5);
-        orderingSpinner.setAdapter(new ArrayAdapter<ColorOrdering>(getActivity(),
-                R.layout.command_row, R.id.command_name, ColorOrdering.values));
+        orderingSpinner.setAdapter(new ArrayAdapter<>(getActivity(),
+                R.layout.command_row, R.id.command_name, NeoPixel.ColorOrdering.values()));
         
         directionSpinner= (Spinner) view.findViewById(R.id.spinner3);
-        directionSpinner.setAdapter(new ArrayAdapter<RotationDirection>(getActivity(), 
-                R.layout.command_row, R.id.command_name, RotationDirection.values));
+        directionSpinner.setAdapter(new ArrayAdapter<>(getActivity(),
+                R.layout.command_row, R.id.command_name, NeoPixel.RotationDirection.values()));
         
         final Button rotateButton= (Button) view.findViewById(R.id.button4);
         rotateButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mwMnger.controllerReady()) {
-                    short rotationPeriod= Short.parseShort(rotationPeriodText.getEditableText().toString());
-                    neoPixelController.rotateStrand(strand, 
-                            RotationDirection.values[directionSpinner.getSelectedItemPosition()], 
-                            (byte)-1, rotationPeriod);
+                if (currBoard != null && currBoard.isConnected()) {
+                    try {
+                        NeoPixel neoPixelController = currBoard.getModule(NeoPixel.class);
+                        short rotationPeriod = Short.parseShort(rotationPeriodText.getEditableText().toString());
+                        neoPixelController.rotate(strand, NeoPixel.RotationDirection.values()[directionSpinner.getSelectedItemPosition()],
+                                rotationPeriod);
+                    } catch (UnsupportedModuleException e) {
+                        Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                    }
                 } else {
                     Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
                 }
@@ -303,11 +326,16 @@ public class NeoPixelFragment extends ModuleFragment {
         stopButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (neoPixelController != null) {
-                    short rotationPeriod= Short.parseShort(rotationPeriodText.getEditableText().toString());
-                    neoPixelController.rotateStrand(strand, 
-                            RotationDirection.values[directionSpinner.getSelectedItemPosition()], 
-                            (byte)0, rotationPeriod);
+                if (currBoard != null && currBoard.isConnected()) {
+                    try {
+                        NeoPixel neoPixelController = currBoard.getModule(NeoPixel.class);
+                        short rotationPeriod = Short.parseShort(rotationPeriodText.getEditableText().toString());
+                        neoPixelController.stopRotation(strand);
+                    } catch (UnsupportedModuleException e) {
+                        Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                    }
+                } else {
+                    Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
                 }
             }
         });
@@ -315,37 +343,6 @@ public class NeoPixelFragment extends ModuleFragment {
         rotationPeriodText= (EditText) view.findViewById(R.id.editText3);
         
         npTimer= new Timer();
-    }
-    
-    private DeviceCallbacks dCallback= new MetaWearController.DeviceCallbacks() {
-        @Override
-        public void connected() {
-            readNeoState();
-        }
-    };
-    private ModuleCallbacks mCallback= new NeoPixel.Callbacks() {
-
-        @Override
-        public void receivedStrandState(byte strandIndex, ColorOrdering order,
-                StrandSpeed speed, byte pin, byte strandLength) {
-            
-            gpioPinText.setText(String.format("%d", pin));
-            nLEDsText.setText(String.format("%d", strandLength));
-            speedSpinner.setSelection(speed.ordinal());
-        }
-
-        @Override
-        public void receivedRotatationState(byte strandIndex,
-                RotationDirection direction, byte repetitions, short period) {
-            rotationPeriodText.setText(String.format("%d", period));
-            directionSpinner.setSelection(direction.ordinal());
-        }
-    };
-    
-    @Override
-    public void controllerReady(MetaWearController mwController) {
-        neoPixelController= (NeoPixel) mwController.getModuleController(Module.NEO_PIXEL);
-        mwController.addDeviceCallback(dCallback).addModuleCallback(mCallback);
     }
     
     @Override
@@ -357,16 +354,5 @@ public class NeoPixelFragment extends ModuleFragment {
         }
         
         return super.onOptionsItemSelected(item);
-    }
-    
-    @Override
-    public void onDestroy() {
-        final MetaWearController mwController= mwMnger.getCurrentController();
-        if (mwMnger.hasController()) {
-            mwController.removeDeviceCallback(dCallback);
-            mwController.removeModuleCallback(mCallback);
-        }
-        
-        super.onDestroy();
     }
 }

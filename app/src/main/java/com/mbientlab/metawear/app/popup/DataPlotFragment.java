@@ -30,7 +30,6 @@
  */
 package com.mbientlab.metawear.app.popup;
 
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -40,7 +39,6 @@ import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
 import com.jjoe64.graphview.LegendRenderer;
-import com.mbientlab.metawear.api.util.BytesInterpreter;
 import com.mbientlab.metawear.app.AccelerometerFragment.Configuration;
 import com.mbientlab.metawear.app.R;
 
@@ -124,23 +122,10 @@ public class DataPlotFragment extends DialogFragment {
         graph.getLegendRenderer().setAlign(LegendRenderer.LegendAlign.MIDDLE);
 
         
-        for(byte[] dataBytes: accelConfig.polledBytes()) {
-            ByteBuffer buffer= ByteBuffer.wrap(dataBytes);
-            double tickInS= (double) (buffer.getLong(6) / 1000.0);
-            float xAccel, yAccel, zAccel;
-            
-            if (accelConfig.firmwarePos() == 0) {
-                xAccel= buffer.getShort(0) / 1000.0f;
-                yAccel= buffer.getShort(2) / 1000.0f;
-                zAccel= buffer.getShort(4) / 1000.0f;
-            } else {
-                xAccel= BytesInterpreter.bytesToGs(accelConfig.getSamplingConfig(), buffer.getShort(0));
-                yAccel= BytesInterpreter.bytesToGs(accelConfig.getSamplingConfig(), buffer.getShort(2));
-                zAccel= BytesInterpreter.bytesToGs(accelConfig.getSamplingConfig(), buffer.getShort(4));
-            }
-            convertedX.add(new DataPoint(tickInS, xAccel));
-            convertedY.add(new DataPoint(tickInS, yAccel));
-            convertedZ.add(new DataPoint(tickInS, zAccel));
+        for(float[] dataBytes: accelConfig.polledBytes()) {
+            convertedX.add(new DataPoint(dataBytes[0], dataBytes[1]));
+            convertedY.add(new DataPoint(dataBytes[0], dataBytes[2]));
+            convertedZ.add(new DataPoint(dataBytes[0], dataBytes[3]));
             
         }
         

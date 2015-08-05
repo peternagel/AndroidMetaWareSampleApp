@@ -32,17 +32,19 @@ package com.mbientlab.metawear.app;
 
 import java.util.Locale;
 
-import com.mbientlab.metawear.api.MetaWearController;
-import com.mbientlab.metawear.api.MetaWearController.ModuleCallbacks;
-import com.mbientlab.metawear.api.Module;
-import com.mbientlab.metawear.api.controller.GPIO;
-import com.mbientlab.metawear.api.controller.GPIO.AnalogMode;
-import com.mbientlab.metawear.api.controller.GPIO.PullMode;
+import com.mbientlab.metawear.AsyncOperation;
+import com.mbientlab.metawear.Message;
+import com.mbientlab.metawear.MetaWearBoard;
+import com.mbientlab.metawear.RouteManager;
+import com.mbientlab.metawear.UnsupportedModuleException;
+import com.mbientlab.metawear.module.Gpio;
 
 import android.os.Bundle;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.EditorInfo;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -57,32 +59,10 @@ import android.widget.AdapterView.OnItemSelectedListener;
  *
  */
 public class GPIOFragment extends ModuleFragment {
-    private EditText pinText;
-    private GPIO gpioController;
-    private PullMode pullMode;
-    
-    private ModuleCallbacks mCallbacks= new GPIO.Callbacks() {
-        @Override
-        public void receivedAnalogInputAsAbsReference(byte pin, short value) {
-            if (isVisible()) {
-                ((TextView) getView().findViewById(R.id.textView4)).setText(String.format(Locale.US, "%d mV", value));
-            }
-        }
+    private Gpio gpioController;
+    private Gpio.PullMode pullMode;
+    private byte gpioPin;
 
-        @Override
-        public void receivedAnalogInputAsSupplyRatio(byte pin, short value) {
-            if (isVisible()) {
-                ((TextView) getView().findViewById(R.id.textView5)).setText(String.format(Locale.US, "%d", value));
-            }
-        }
-
-        @Override
-        public void receivedDigitalInput(byte pin, byte value) {
-            if (isVisible()) {
-                ((TextView) getView().findViewById(R.id.textView8)).setText(String.format(Locale.US, "%d", value));
-            }
-        }
-    };
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState) {
@@ -95,119 +75,154 @@ public class GPIOFragment extends ModuleFragment {
         pullModeSpinner.setOnItemSelectedListener(new OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view,
-                    int position, long id) {
-                pullMode= PullMode.values[position];
+                                       int position, long id) {
+                pullMode = Gpio.PullMode.values()[position];
             }
 
             @Override
-            public void onNothingSelected(AdapterView<?> parent) { }
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
         });
-        pullModeSpinner.setAdapter(new ArrayAdapter<PullMode>(getActivity(), 
-                R.layout.command_row, R.id.command_name, PullMode.values));
+        pullModeSpinner.setAdapter(new ArrayAdapter<>(getActivity(),
+                R.layout.command_row, R.id.command_name, Gpio.PullMode.values()));
         
-        ((Button) view.findViewById(R.id.button1)).setOnClickListener(new Button.OnClickListener() {
+        view.findViewById(R.id.button1).setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mwMnger.controllerReady()) {
-                    try {
-                        byte gpioPin= Byte.valueOf(pinText.getEditableText().toString());
-                        
-                        gpioController.readAnalogInput(gpioPin, AnalogMode.ABSOLUTE_VALUE);
-                        gpioController.readAnalogInput(gpioPin, AnalogMode.SUPPLY_RATIO);
-                    } catch (NumberFormatException ex) {
-                        Toast.makeText(getActivity(), ex.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
-                    }
+                if (currBoard != null && currBoard.isConnected()) {
+                    gpioController.readAnalogIn(gpioPin, Gpio.AnalogReadMode.ABS_REFERENCE);
+                    gpioController.readAnalogIn(gpioPin, Gpio.AnalogReadMode.ADC);
                 } else {
                     Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
                 }
             }
         });
         
-        ((Button) view.findViewById(R.id.button2)).setOnClickListener(new Button.OnClickListener() {
+        view.findViewById(R.id.button2).setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mwMnger.controllerReady()) {
-                    try {
-                        byte gpioPin= Byte.valueOf(pinText.getEditableText().toString());
-                    
-                        gpioController.setDigitalInput(gpioPin, pullMode);
-                    } catch (NumberFormatException ex) {
-                        Toast.makeText(getActivity(), ex.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
-                    }
+                if (currBoard != null && currBoard.isConnected()) {
+                    gpioController.setPinPullMode(gpioPin, pullMode);
                 } else {
                     Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
                 }
             }
         });
         
-        ((Button) view.findViewById(R.id.button3)).setOnClickListener(new Button.OnClickListener() {
+        view.findViewById(R.id.button3).setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mwMnger.controllerReady()) {
-                    try {
-                        byte gpioPin= Byte.valueOf(pinText.getEditableText().toString());
-                        
-                        gpioController.readDigitalInput(gpioPin);
-                    } catch (NumberFormatException ex) {
-                        Toast.makeText(getActivity(), ex.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
-                    }
+                if (currBoard != null && currBoard.isConnected()) {
+                    gpioController.readDigitalIn(gpioPin);
                 } else {
                     Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
                 }
             }
         });
         
-        ((Button) view.findViewById(R.id.button4)).setOnClickListener(new Button.OnClickListener() {
+        view.findViewById(R.id.button4).setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mwMnger.controllerReady()) {
-                    try {
-                        byte gpioPin= Byte.valueOf(pinText.getEditableText().toString());
-                        
-                        gpioController.setDigitalOutput(gpioPin);
-                    } catch (NumberFormatException ex) {
-                        Toast.makeText(getActivity(), ex.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
-                    }
+                if (currBoard != null && currBoard.isConnected()) {
+                    gpioController.setDigitalOut(gpioPin);
                 } else {
                     Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
                 }
             }
         });
         
-        ((Button) view.findViewById(R.id.button5)).setOnClickListener(new Button.OnClickListener() {
+        view.findViewById(R.id.button5).setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mwMnger.controllerReady()) {
-                    try {
-                        byte gpioPin= Byte.valueOf(pinText.getEditableText().toString());
-                        
-                        gpioController.clearDigitalOutput(gpioPin);
-                    } catch (NumberFormatException ex) {
-                        Toast.makeText(getActivity(), ex.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
-                    }
+                if (currBoard != null && currBoard.isConnected()) {
+                    gpioController.clearDigitalOut(gpioPin);
                 } else {
                     Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
                 }
             }
         });
-        
-        pinText= ((EditText) view.findViewById(R.id.editText1));
+
+        gpioPin= 0;
+        ((EditText) view.findViewById(R.id.editText1)).setText("0");
+        ((EditText) view.findViewById(R.id.editText1)).setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+                switch (actionId) {
+                    case EditorInfo.IME_ACTION_DONE:
+                    case EditorInfo.IME_ACTION_NEXT:
+                        try {
+                            gpioPin = Byte.valueOf(v.getEditableText().toString());
+                            addRoute(mwMnger.getCurrentController());
+                        } catch (NumberFormatException ex) {
+                            Toast.makeText(getActivity(), ex.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                        break;
+                }
+                return false;
+            }
+        });
     }
-    
-    @Override
-    public void controllerReady(MetaWearController mwController) {
-        gpioController= (GPIO) mwController.getModuleController(Module.GPIO);
-        mwController.addModuleCallback(mCallbacks);
-    }
-    
-    
-    @Override
-    public void onDestroy() {
-        final MetaWearController mwController= mwMnger.getCurrentController();
-        if (mwMnger.hasController()) {
-            mwController.removeModuleCallback(mCallbacks);
+
+    private RouteManager.MessageHandler analogAbsHandler= new RouteManager.MessageHandler() {
+        @Override
+        public void process(Message message) {
+            ((TextView) getView().findViewById(R.id.textView4)).setText(String.format(Locale.US, "%d mV", message.getData(Short.class)));
         }
-        
-        super.onDestroy();
+    }, analogAdcHandler= new RouteManager.MessageHandler() {
+        @Override
+        public void process(Message message) {
+            ((TextView) getView().findViewById(R.id.textView5)).setText(String.format(Locale.US, "%d", message.getData(Short.class)));
+        }
+    }, digitalHandler= new RouteManager.MessageHandler() {
+        @Override
+        public void process(Message message) {
+            ((TextView) getView().findViewById(R.id.textView8)).setText(String.format(Locale.US, "%d", message.getData(Byte.class)));
+        }
+    };
+    private void addRoute(final MetaWearBoard mwController) {
+        mwController.removeRoutes();
+
+        gpioController.routeData().fromAnalogGpio(gpioPin, Gpio.AnalogReadMode.ABS_REFERENCE).stream("analog_abs")
+                .commit().onComplete(new AsyncOperation.CompletionHandler<RouteManager>() {
+                    @Override
+                    public void success(RouteManager result) {
+                        result.subscribe("analog_abs", analogAbsHandler);
+                    }
+                });
+        gpioController.routeData().fromAnalogGpio(gpioPin, Gpio.AnalogReadMode.ADC).stream("analog_adc")
+                .commit().onComplete(new AsyncOperation.CompletionHandler<RouteManager>() {
+                    @Override
+                    public void success(RouteManager result) {
+                        result.subscribe("analog_adc", analogAdcHandler);
+                    }
+                });
+        gpioController.routeData().fromDigitalIn(gpioPin).stream("digital_in").commit()
+                .onComplete(new AsyncOperation.CompletionHandler<RouteManager>() {
+                    @Override
+                    public void success(RouteManager result) {
+                        result.subscribe("digital_in", digitalHandler);
+                    }
+                });
+    }
+
+    private MetaWearBoard currBoard;
+
+    @Override
+    public void connected(MetaWearBoard currBoard) {
+        this.currBoard= currBoard;
+        currBoard.removeRoutes();
+
+        try {
+            gpioController= currBoard.getModule(Gpio.class);
+            addRoute(currBoard);
+        } catch (UnsupportedModuleException e) {
+            Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+        }
+
+    }
+
+    @Override
+    public void disconnected() {
+
     }
 }

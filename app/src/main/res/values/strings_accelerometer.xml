@@ -25,12 +25,6 @@
     <string name="label_movement_type">Movement Type</string>
     <string name="label_data_range">Data Range</string>
     <string name="label_sampling_rate">Sampling Rate</string>
-    <string name="label_firmware">Firmware Version</string>
     
     <string name="error_no_accel_data">No accelerometer data available</string>
-        
-    <string-array name="firmware_version_array">
-        <item>0.9.0 or later</item>
-        <item>0.8.6 or earlier</item>
-    </string-array>
 </resources>

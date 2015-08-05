@@ -30,7 +30,7 @@
  */
 package com.mbientlab.metawear.app;
 
-import com.mbientlab.metawear.api.MetaWearController;
+import com.mbientlab.metawear.MetaWearBoard;
 
 import android.app.Activity;
 import android.support.v4.app.Fragment;
@@ -41,13 +41,11 @@ import android.support.v4.app.Fragment;
  */
 public abstract class ModuleFragment extends Fragment {
     protected MetaWearManager mwMnger;
-    
-    public void clearBluetoothDevice() { }
-    
+
     public interface MetaWearManager {
-        public MetaWearController getCurrentController();
-        public boolean hasController();
-        public boolean controllerReady();
+        MetaWearBoard getCurrentController();
+        boolean hasController();
+        boolean controllerReady();
     }
     
     @Override
@@ -60,6 +58,7 @@ public abstract class ModuleFragment extends Fragment {
         }
         mwMnger= (MetaWearManager) activity;
     }
-    
-    public abstract void controllerReady(MetaWearController mwController);
+
+    public abstract void connected(MetaWearBoard mwController);
+    public abstract void disconnected();
 }

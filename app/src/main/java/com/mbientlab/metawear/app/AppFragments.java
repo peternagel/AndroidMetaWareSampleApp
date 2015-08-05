@@ -47,11 +47,11 @@ public class AppFragments {
         fragments.put("Accelerometer", AccelerometerFragment.class);
         fragments.put("IBeacon", IBeaconFragment.class);
         fragments.put("Haptic", HapticFragment.class);
-        fragments.put("GPIO", GPIOFragment.class);
-        fragments.put("Neo Pixel", NeoPixelFragment.class);
-        fragments.put("Temperature", TemperatureFragment.class);
-        fragments.put("Event", EventFragment.class);
         fragments.put("Settings", SettingsFragment.class);
+        fragments.put("Neo Pixel", NeoPixelFragment.class);
+        fragments.put("Event", EventFragment.class);
+        fragments.put("Temperature", TemperatureFragment.class);
+        fragments.put("GPIO", GPIOFragment.class);
         fragments.put("Logging", LoggingFragment.class);
 
         items= fragments.keySet().toArray(new String[fragments.size()]);

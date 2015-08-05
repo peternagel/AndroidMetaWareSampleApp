@@ -33,8 +33,6 @@ package com.mbientlab.metawear.app;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Locale;
@@ -46,138 +44,115 @@ import android.content.pm.ActivityInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.content.FileProvider;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.Toast;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.TextView;
 
-import com.mbientlab.metawear.api.MetaWearController;
-import com.mbientlab.metawear.api.Module;
-import com.mbientlab.metawear.api.controller.Accelerometer;
-import com.mbientlab.metawear.api.controller.Accelerometer.SamplingConfig.FullScaleRange;
-import com.mbientlab.metawear.api.controller.Accelerometer.SamplingConfig.OutputDataRate;
-import com.mbientlab.metawear.api.controller.DataProcessor;
-import com.mbientlab.metawear.api.controller.DataProcessor.FilterConfig;
-import com.mbientlab.metawear.api.controller.Event;
-import com.mbientlab.metawear.api.controller.GPIO;
-import com.mbientlab.metawear.api.controller.GPIO.AnalogMode;
-import com.mbientlab.metawear.api.controller.Logging;
-import com.mbientlab.metawear.api.controller.Logging.LogEntry;
-import com.mbientlab.metawear.api.controller.Temperature;
-import com.mbientlab.metawear.api.controller.Timer;
-import com.mbientlab.metawear.api.util.BytesInterpreter;
-import com.mbientlab.metawear.api.util.FilterConfigBuilder;
-import com.mbientlab.metawear.api.util.LoggingTrigger;
-import com.mbientlab.metawear.api.util.TriggerBuilder;
+import com.mbientlab.metawear.AsyncOperation;
+import com.mbientlab.metawear.Message;
+import com.mbientlab.metawear.MetaWearBoard;
+import com.mbientlab.metawear.RouteManager;
+import com.mbientlab.metawear.UnsupportedModuleException;
+import com.mbientlab.metawear.data.CartesianFloat;
+import com.mbientlab.metawear.module.Accelerometer;
+import com.mbientlab.metawear.module.Gpio;
+import com.mbientlab.metawear.module.Logging;
+import com.mbientlab.metawear.module.Temperature;
+import com.mbientlab.metawear.module.Timer;
+import com.mbientlab.metawear.processor.Time;
 
 /**
  * @author etsai
  *
  */
 public class LoggingFragment extends ModuleFragment {
-    private abstract class Sensor extends Logging.Callbacks {
-        private int totalEntries;
-        private boolean ready;
-        protected LogEntry firstEntry;
-        
-        public abstract String getDescription();
-        public abstract void stopSensors();
-        public abstract File[] saveDataToFile() throws IOException;
-        public abstract void processData(double offset, LogEntry entry);
-        
-        public void setupLogger() {
-            ready= false;
-        }
-        
-        public boolean dataReady() {
-            return ready;
-        }
-        
-        @Override
-        public void receivedTriggerId(byte triggerId) {
-            loggingController.startLogging();
-            Toast.makeText(getActivity(), R.string.label_lob_start_message, Toast.LENGTH_SHORT).show();
-        }
-        
-        @Override
-        public void receivedLogEntry(LogEntry entry) {
-            if (firstEntry == null) {
-                firstEntry= entry;
-            }
-            processData(entry.offset(firstEntry) / 1000.0, entry);
-        }
-        
-        @Override
-        public void receivedTotalEntryCount(int totalEntries) {
-            if (logDLProgress == null || !logDLProgress.isShowing()) {
-                this.totalEntries= totalEntries;
-                
-                logDLProgress= new ProgressDialog(getActivity());
-                logDLProgress.setOwnerActivity(getActivity());
-                logDLProgress.setTitle("Log Download");
-                logDLProgress.setMessage("Downloading log...");
-                logDLProgress.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-                logDLProgress.setProgress(0);
-                logDLProgress.setMax(totalEntries);
-                logDLProgress.show();
-            
-                loggingController.downloadLog(totalEntries, (int) (totalEntries * 0.01));
-            }
-        }
-        
-        @Override
-        public void receivedDownloadProgress(int nEntriesLeft) {
-            logDLProgress.setProgress(totalEntries - nEntriesLeft);
-        }
+    private MetaWearBoard currBoard;
 
-        @Override
-        public void downloadCompleted() {
-            if (logDLProgress.isShowing()) {
-                logDLProgress.dismiss();
-            }
-            
-            firstEntry= null;
-            ready= true;
-            loggingController.removeAllTriggers();
-            startEmailIntent();
-        }
+    private interface Sensor {
+        String getDescription();
+        void stopSensors();
+        void setup();
+        File[] saveDataToFile() throws IOException;
     }
     
-    private class GPIOSensor extends Sensor {
+    private class GPIOSensor implements Sensor {
         private class GPIOLogData {
-            public GPIOLogData(double time, byte[] adcData) {
+            public GPIOLogData(double time, short adcData) {
                 this.time= time;
-                this.adc= (short) ((adcData[0] & 0xff) | ((adcData[1] << 8) & 0xffff));
+                this.adc= adcData;
             }
             public final double time;
             public final short adc;
         }
 
+        private Calendar first= null;
         private ArrayList<GPIOLogData> gpioData;
         private final String CSV_HEADER_ADC= "time,adc";
-        private byte myTimerId= -1, commandId= -1;
         private final byte gpioPin;
 
         public GPIOSensor(byte gpioPin) {
             this.gpioPin= gpioPin;
         }
-        
+
+        @Override
+        public void setup() {
+            try {
+                gpioData= new ArrayList<>();
+                final Gpio gpioModule = currBoard.getModule(Gpio.class);
+                final Timer timerModule = currBoard.getModule(Timer.class);
+                final Logging logModule = currBoard.getModule(Logging.class);
+
+                currBoard.removeRoutes();
+                gpioModule.routeData().fromAnalogGpio(gpioPin, Gpio.AnalogReadMode.ADC).log("log_gpio_adc")
+                        .commit().onComplete(new AsyncOperation.CompletionHandler<RouteManager>() {
+                            @Override
+                            public void success(RouteManager result) {
+                                result.setLogMessageHandler("log_gpio_adc", new RouteManager.MessageHandler() {
+                                    @Override
+                                    public void process(Message message) {
+                                        double offset;
+
+                                        if (first == null) {
+                                            first= message.getTimestamp();
+                                            offset= 0.0;
+                                        } else {
+                                            offset= (message.getTimestamp().getTimeInMillis() - first.getTimeInMillis()) / 1000.0;
+                                        }
+
+                                        gpioData.add(new GPIOLogData(offset, message.getData(Short.class)));
+                                    }
+                                });
+                            }
+                        });
+                timerModule.scheduleTask(new Timer.Task() {
+                    @Override
+                    public void commands() {
+                        gpioModule.readAnalogIn(gpioPin, Gpio.AnalogReadMode.ADC);
+                    }
+                }, 500, false).onComplete(new AsyncOperation.CompletionHandler<Timer.Controller>() {
+                    @Override
+                    public void success(Timer.Controller result) {
+                        logModule.startLogging();
+                        result.start();
+                    }
+                });
+            } catch (UnsupportedModuleException e) {
+                Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+            }
+        }
+
         @Override
         public String getDescription() {
             return String.format(Locale.US, "Logs ADC value of GPIO pin %d every 500ms.  %s", 
                     gpioPin, "You will need firmware 1.0.0 or higher to log GPIO data");
-        }
-        @Override
-        public void receivedTriggerId(byte triggerId) {
-            super.receivedTriggerId(triggerId);
-            ((Timer) mwMnger.getCurrentController().getModuleController(Module.TIMER)).startTimer(myTimerId);
         }
         
         @Override
@@ -185,51 +160,36 @@ public class LoggingFragment extends ModuleFragment {
         
         @Override
         public void stopSensors() {
-            final MetaWearController mwController= mwMnger.getCurrentController();
-            final Event  eventController= (Event) mwController.getModuleController(Module.EVENT);
-            final Timer timerController= (Timer) mwController.getModuleController(Module.TIMER);
+            try {
+                final Timer timerModule = currBoard.getModule(Timer.class);
+                final Logging logModule = currBoard.getModule(Logging.class);
 
-            timerController.removeTimer(myTimerId);
-            eventController.removeCommand(commandId);
-        }
-        
-        @Override
-        public void setupLogger() {
-            super.setupLogger();
-            
-            gpioData= new ArrayList<>();
-            
-            final MetaWearController mwController= mwMnger.getCurrentController();
-            final GPIO gpioController= (GPIO) mwController.getModuleController(Module.GPIO);
-            final Event eventController= (Event) mwController.getModuleController(Module.EVENT);
-            final Timer timerController= (Timer) mwController.getModuleController(Module.TIMER);
-            mwController.addModuleCallback(new Timer.Callbacks() {
-                @Override
-                public void receivedTimerId(byte timerId) {
-                    myTimerId= timerId;
-                    
-                    eventController.recordMacro(Timer.Register.TIMER_NOTIFY, timerId);
-                    gpioController.readAnalogInput(gpioPin, AnalogMode.SUPPLY_RATIO);
-                    eventController.stopRecord();
-                    
-                    loggingController.addReadTrigger(TriggerBuilder.buildGPIOAnalogTrigger(true, gpioPin));
-                    
-                    mwController.removeModuleCallback(this);
-                }
-            }).addModuleCallback(new Event.Callbacks() {
-                @Override
-                public void receivedCommandId(byte id) {
-                    commandId= id;
-                    mwController.removeModuleCallback(this);
-                }
-            });
-            
-            timerController.addTimer(500, (short) 0, false);
-        }
-        
-        @Override
-        public void processData(double offset, LogEntry entry) {
-            gpioData.add(new GPIOLogData(offset, entry.data()));
+                logDLProgress= new ProgressDialog(getActivity());
+                logDLProgress.setOwnerActivity(getActivity());
+                logDLProgress.setTitle("Log Download");
+                logDLProgress.setMessage("Downloading log...");
+                logDLProgress.setIndeterminate(true);
+                logDLProgress.show();
+
+                timerModule.removeTimers();
+                logModule.stopLogging();
+                logModule.downloadLog(0.0f, new Logging.DownloadHandler() {
+                    @Override
+                    public void onProgressUpdate(int nEntriesLeft, int totalEntries) {
+                        if (nEntriesLeft == 0) {
+                            logDLProgress.dismiss();
+                            startEmailIntent();
+                        }
+                    }
+
+                    @Override
+                    public void receivedUnknownLogEntry(byte logId, Calendar timestamp, byte[] data) {
+                        Log.i("Logging", String.format("ID= %d", logId));
+                    }
+                });
+            } catch (UnsupportedModuleException e) {
+                Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+            }
         }
         
         @Override
@@ -243,7 +203,7 @@ public class LoggingFragment extends ModuleFragment {
                 fos.write(String.format(Locale.US, "%.3f,%d%n", it.time, it.adc).getBytes());
             }
             fos.close();
-            
+
             return dataFiles;
         }
     }
@@ -251,9 +211,8 @@ public class LoggingFragment extends ModuleFragment {
     private int sensorIndex;
     private Sensor[] sensors= {
             new Sensor() {
-                private byte xyAxisId= -1, zAxisId= -1;
-                private ArrayList<double[]> xyData= null, zData= null;
-                private final String CSV_HEADER_XY= "time,x-Axis,y-Axis", CSV_HEADER_Z= "time,z-Axis";
+                private ArrayList<Message> xyzData;
+                private final String CSV_HEADER_XYZ= "time,x-axis,y-axis,z-axis";
                   
                 @Override
                 public String getDescription() {
@@ -265,85 +224,92 @@ public class LoggingFragment extends ModuleFragment {
                 
                 @Override
                 public void stopSensors() {
-                    final Accelerometer accelController= (Accelerometer) mwMnger.getCurrentController()
-                                .getModuleController(Module.ACCELEROMETER);
-                    accelController.stopComponents();
-                }
-                
-                @Override
-                public void setupLogger() {
-                    super.setupLogger();
+                    try {
+                        final Accelerometer accelController= currBoard.getModule(Accelerometer.class);
+                        final Logging logModule = currBoard.getModule(Logging.class);
 
-                    final Accelerometer accelController= (Accelerometer) mwMnger.getCurrentController()
-                            .getModuleController(Module.ACCELEROMETER);
-                    xyData= new ArrayList<>();
-                    zData= new ArrayList<>();
-                    
-                    xyAxisId= -1;
-                    zAxisId= -1;
-                    
-                    loggingController.addTrigger(LoggingTrigger.ACCELEROMETER_XY_AXIS);
-                    loggingController.addTrigger(LoggingTrigger.ACCELEROMETER_Z_AXIS);
-                    
-                    accelController.enableXYZSampling().withFullScaleRange(FullScaleRange.FSR_8G)
-                        .withOutputDataRate(OutputDataRate.ODR_50_HZ)
-                        .withSilentMode();
-                    accelController.startComponents();
-                }
-                
-                @Override
-                public void receivedTriggerId(byte triggerId) {
-                    if (xyAxisId == -1) {
-                        xyAxisId= triggerId;
-                    } else {
-                        zAxisId= triggerId;
-                        
-                        super.receivedTriggerId(triggerId);
+                        accelController.stop();
+
+                        logDLProgress= new ProgressDialog(getActivity());
+                        logDLProgress.setOwnerActivity(getActivity());
+                        logDLProgress.setTitle("Log Download");
+                        logDLProgress.setMessage("Downloading log...");
+                        logDLProgress.setIndeterminate(true);
+                        logDLProgress.show();
+
+                        logModule.stopLogging();
+                        logModule.downloadLog(0.0f, new Logging.DownloadHandler() {
+                            @Override
+                            public void onProgressUpdate(int nEntriesLeft, int totalEntries) {
+                                if (nEntriesLeft == 0) {
+                                    logDLProgress.dismiss();
+                                    startEmailIntent();
+                                }
+                            }
+                        });
+
+                    } catch (UnsupportedModuleException e) {
+                        Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
                     }
                 }
                 
                 @Override
-                public void processData(double offset, LogEntry entry) {
-                    if (entry.triggerId() == xyAxisId) {
-                        xyData.add(new double[] { offset, BytesInterpreter.logBytesToGs(entry.data(), (byte) 0), 
-                                BytesInterpreter.logBytesToGs(entry.data(), (byte) 2) });
-                    } else if (entry.triggerId() == zAxisId) {
-                        zData.add(new double[] { offset, BytesInterpreter.logBytesToGs(entry.data(), (byte) 0) });
+                public void setup() {
+                    try {
+                        final Accelerometer accelController= currBoard.getModule(Accelerometer.class);
+                        final Logging logModule = currBoard.getModule(Logging.class);
+
+                        currBoard.removeRoutes();
+                        xyzData= new ArrayList<>();
+                        logModule.startLogging();
+                        accelController.routeData().fromAxes().log("accelerometer_axis_log").commit().onComplete(new AsyncOperation.CompletionHandler<RouteManager>() {
+                            @Override
+                            public void success(RouteManager result) {
+                                result.setLogMessageHandler("accelerometer_axis_log", new RouteManager.MessageHandler() {
+                                    @Override
+                                    public void process(Message message) {
+                                        xyzData.add(message);
+                                    }
+                                });
+
+                                accelController.setOutputDataRate(50.f);
+                                accelController.enableAxisSampling();
+                                accelController.start();
+                            }
+                        });
+                    } catch (UnsupportedModuleException e) {
+                        Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
                     }
                 }
                 
                 @Override
                 public File[] saveDataToFile() throws IOException {
-                    File xyFile= LoggingFragment.this.getActivity().getFileStreamPath("Accelerometer_xy_data.csv"),
-                            zFile= LoggingFragment.this.getActivity().getFileStreamPath("Accelerometer_z_data.csv");
-                    File[] dataFiles= new File[] {xyFile, zFile};
-                    
-                    FileOutputStream fos= new FileOutputStream(xyFile);
-                    fos.write(String.format("%s%n", CSV_HEADER_XY).getBytes());
-                    for(double[] it: xyData) {
-                        fos.write(String.format(Locale.US, "%.3f,%.3f,%.3f%n", it[0], it[1], it[2]).getBytes());
+                    File xyzFile= LoggingFragment.this.getActivity().getFileStreamPath("Accelerometer_xyz_data.csv");
+                    File[] dataFiles= new File[] {xyzFile};
+
+                    Calendar first= null;
+                    FileOutputStream fos= new FileOutputStream(xyzFile);
+                    fos.write(String.format("%s%n", CSV_HEADER_XYZ).getBytes());
+                    for(Message it: xyzData) {
+                        double offset;
+                        CartesianFloat axisData= it.getData(CartesianFloat.class);
+                        if (first == null) {
+                            first= it.getTimestamp();
+                            offset= 0;
+                        } else {
+                            offset= (it.getTimestamp().getTimeInMillis() - first.getTimeInMillis()) / 1000.0;
+                        }
+                        fos.write(String.format(Locale.US, "%.3f,%.3f,%.3f,%.3f%n", offset, axisData.x(), axisData.y(), axisData.z()).getBytes());
                     }
                     fos.close();
-                    
-                    fos= new FileOutputStream(zFile);
-                    fos.write(String.format("%s%n", CSV_HEADER_Z).getBytes());
-                    for(double[] it: zData) {
-                        fos.write(String.format(Locale.US, "%.3f,%.3f%n", it[0], it[1]).getBytes());
-                    }
-                    fos.close();
-                    
+
                     return dataFiles;
                 }
             },
             new Sensor() {
                 private final String CSV_HEADER_ACTIVITY= "time,activity";
-                private final byte ACTIVITY_DATA_SIZE = 4;
                 private final int TIME_DELAY_PERIOD= 30000;
-
-
-                private ArrayList<double[]> activityData;
-                private byte rmsFilterId= -1, accumFilterId= -1, timeFilterId= -1;
-
+                private ArrayList<Message> activityData;
 
                 @Override
                 public String getDescription() {
@@ -354,99 +320,108 @@ public class LoggingFragment extends ModuleFragment {
                 public String toString() { return "Activity"; }
 
                 @Override
-                public void stopSensors() {
-                    final MetaWearController currCtrllr= mwMnger.getCurrentController();
-                    final DataProcessor dpCtrllr= (DataProcessor) currCtrllr.getModuleController(Module.DATA_PROCESSOR);
-                    final Accelerometer accelCtrllr= (Accelerometer) currCtrllr.getModuleController(Module.ACCELEROMETER);
+                public void setup() {
+                    try {
+                        final Accelerometer accelController= currBoard.getModule(Accelerometer.class);
+                        final Logging logModule = currBoard.getModule(Logging.class);
 
-                    accelCtrllr.stopComponents();
-                    dpCtrllr.removeFilter(rmsFilterId);
-                    dpCtrllr.removeFilter(timeFilterId);
-                    dpCtrllr.removeFilter(accumFilterId);
+                        currBoard.removeRoutes();
+                        activityData= new ArrayList<>();
+                        logModule.startLogging();
+                        accelController.routeData().fromAxes().process("rms").process("accumulator?output=4").process(new Time(Time.OutputMode.ABSOLUTE, TIME_DELAY_PERIOD)).log("activity_log")
+                                .commit().onComplete(new AsyncOperation.CompletionHandler<RouteManager>() {
+                                    @Override
+                                    public void success(RouteManager result) {
+                                        result.setLogMessageHandler("activity_log", new RouteManager.MessageHandler() {
+                                            @Override
+                                            public void process(Message message) {
+                                                activityData.add(message);
+                                            }
+                                        });
+
+                                        accelController.setOutputDataRate(50.f);
+                                        accelController.enableAxisSampling();
+                                        accelController.start();
+                                    }
+
+                            @Override
+                            public void failure(Throwable error) {
+                                Log.e("Loggable", "error committing", error);
+                            }
+                        });
+                    } catch (UnsupportedModuleException e) {
+                        Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                    }
                 }
 
                 @Override
-                public void processData(double offset, LogEntry entry) {
-                    int activityMilliG= ByteBuffer.wrap(entry.data()).order(ByteOrder.LITTLE_ENDIAN).getInt();
-                    activityData.add(new double[] {offset, activityMilliG / 1000.0});
+                public void stopSensors() {
+                    try {
+                        final Accelerometer accelController = currBoard.getModule(Accelerometer.class);
+                        final Logging logModule = currBoard.getModule(Logging.class);
+
+                        accelController.stop();
+                        accelController.disableAxisSampling();
+
+                        logDLProgress= new ProgressDialog(getActivity());
+                        logDLProgress.setOwnerActivity(getActivity());
+                        logDLProgress.setTitle("Log Download");
+                        logDLProgress.setMessage("Downloading log...");
+                        logDLProgress.setIndeterminate(true);
+                        logDLProgress.show();
+
+                        logModule.stopLogging();
+                        logModule.downloadLog(0.0f, new Logging.DownloadHandler() {
+                            @Override
+                            public void onProgressUpdate(int nEntriesLeft, int totalEntries) {
+                                if (nEntriesLeft == 0) {
+                                    logDLProgress.dismiss();
+                                    startEmailIntent();
+                                }
+                            }
+
+                            @Override
+                            public void receivedUnknownLogEntry(byte logId, Calendar timestamp, byte[] data) {
+                                Log.i("Logging", String.format("ID= %d", logId));
+                            }
+                        });
+                    } catch (UnsupportedModuleException e) {
+                        Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                    }
                 }
+
                 @Override
                 public File[] saveDataToFile() throws IOException {
                     File tempFile= LoggingFragment.this.getActivity().getFileStreamPath("Activity_Data.csv");
                     File[] dataFiles= new File[] {tempFile};
 
+                    Calendar first= null;
                     FileOutputStream fos= new FileOutputStream(tempFile);
                     fos.write(String.format("%s%n", CSV_HEADER_ACTIVITY).getBytes());
-                    for(double[] it: activityData) {
-                        fos.write(String.format(Locale.US, "%.3f,%.3f%n", it[0], it[1]).getBytes());
+                    for(Message it: activityData) {
+                        double offset;
+                        if (first == null) {
+                            first= it.getTimestamp();
+                            offset= 0;
+                        } else {
+                            offset= (it.getTimestamp().getTimeInMillis() - first.getTimeInMillis()) / 1000.0;
+                        }
+                        fos.write(String.format(Locale.US, "%.3f,%.3f%n", offset, it.getData(Float.class)).getBytes());
                     }
                     fos.close();
 
                     return dataFiles;
                 }
-
-                @Override
-                public void setupLogger() {
-                    super.setupLogger();
-
-                    final MetaWearController currCtrllr= mwMnger.getCurrentController();
-                    final DataProcessor dpCtrllr= (DataProcessor) currCtrllr.getModuleController(Module.DATA_PROCESSOR);
-
-                    activityData= new ArrayList<>();
-
-                    currCtrllr.addModuleCallback(new DataProcessor.Callbacks() {
-                        @Override
-                        public void receivedFilterId(byte filterId) {
-                            if (rmsFilterId == -1) {
-                                rmsFilterId = filterId;
-                                FilterConfig accumFilter= new FilterConfigBuilder.AccumulatorBuilder()
-                                        .withInputSize(LoggingTrigger.ACCELEROMETER_X_AXIS.length())
-                                        .withOutputSize(ACTIVITY_DATA_SIZE)
-                                        .build();
-
-                                dpCtrllr.chainFilters(rmsFilterId, ACTIVITY_DATA_SIZE, accumFilter);
-                            } else if (accumFilterId == -1) {
-                                accumFilterId= filterId;
-                                FilterConfig timeFilter = new FilterConfigBuilder.TimeDelayBuilder()
-                                        .withFilterMode(FilterConfigBuilder.TimeDelayBuilder.FilterMode.ABSOLUTE)
-                                        .withPeriod(TIME_DELAY_PERIOD)
-                                        .withDataSize(ACTIVITY_DATA_SIZE)
-                                        .build();
-
-                                dpCtrllr.chainFilters(accumFilterId, ACTIVITY_DATA_SIZE, timeFilter);
-                            } else {
-                                timeFilterId= filterId;
-                                loggingController.addTrigger(TriggerBuilder.buildDataFilterTrigger(timeFilterId, ACTIVITY_DATA_SIZE));
-
-                                currCtrllr.removeModuleCallback(this);
-                            }
-                        }
-                    });
-
-                    FilterConfig rmsFilter= new FilterConfigBuilder.RMSBuilder()
-                            .withInputCount((byte) 3).withSignedInput()
-                            .withInputSize(LoggingTrigger.ACCELEROMETER_X_AXIS.length())
-                            .withOutputSize(LoggingTrigger.ACCELEROMETER_X_AXIS.length())
-                            .build();
-                    dpCtrllr.addFilter(TriggerBuilder.buildAccelerometerTrigger(), rmsFilter);
-
-                    final Accelerometer accelCtrllr= (Accelerometer) currCtrllr.getModuleController(Module.ACCELEROMETER);
-                    accelCtrllr.enableXYZSampling().withFullScaleRange(FullScaleRange.FSR_8G)
-                            .withHighPassFilter((byte) 0).withOutputDataRate(OutputDataRate.ODR_100_HZ)
-                            .withSilentMode();
-                    accelCtrllr.startComponents();
-                }
             },
             new GPIOSensor((byte) 0),
             new GPIOSensor((byte) 1),
             new Sensor() {
-                private ArrayList<double[]> tempData;
+                private ArrayList<Message> tempData;
                 private final String CSV_HEADER_TEMP= "time,temperature";
 
                 @Override
                 public String getDescription() {
-                    return String.format(Locale.US, "%s.  %s","Logs the temperature value every 500ms",
-                            "You can use the temperature panel to enable/disable thermistor mode");
+                    return "Logs the temperature value every 500ms";
                 }
 
                 @Override
@@ -454,27 +429,70 @@ public class LoggingFragment extends ModuleFragment {
 
                 @Override
                 public void stopSensors() {
-                    final Temperature tempController= (Temperature) mwMnger.getCurrentController()
-                            .getModuleController(Module.TEMPERATURE);
+                    try {
+                        final Timer timerModule = currBoard.getModule(Timer.class);
+                        final Logging logModule = currBoard.getModule(Logging.class);
 
-                    tempController.disableSampling();
+                        timerModule.removeTimers();
+                        logDLProgress= new ProgressDialog(getActivity());
+                        logDLProgress.setOwnerActivity(getActivity());
+                        logDLProgress.setTitle("Log Download");
+                        logDLProgress.setMessage("Downloading log...");
+                        logDLProgress.setIndeterminate(true);
+                        logDLProgress.show();
+
+                        logModule.stopLogging();
+                        logModule.downloadLog(0.0f, new Logging.DownloadHandler() {
+                            @Override
+                            public void onProgressUpdate(int nEntriesLeft, int totalEntries) {
+                                if (nEntriesLeft == 0) {
+                                    logDLProgress.dismiss();
+                                    startEmailIntent();
+                                }
+                            }
+                        });
+
+                    } catch (UnsupportedModuleException e) {
+                        Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                    }
                 }
 
                 @Override
-                public void setupLogger() {
-                    super.setupLogger();
+                public void setup() {
+                    try {
+                        final Temperature tempModule= currBoard.getModule(Temperature.class);
+                        final Timer timerModule= currBoard.getModule(Timer.class);
+                        final Logging logModule = currBoard.getModule(Logging.class);
 
-                    final Temperature tempController= (Temperature) mwMnger.getCurrentController()
-                            .getModuleController(Module.TEMPERATURE);
-                    tempData= new ArrayList<>();
+                        currBoard.removeRoutes();
+                        tempData= new ArrayList<>();
+                        tempModule.routeData().fromSensor().log("temp_logger").commit().onComplete(new AsyncOperation.CompletionHandler<RouteManager>() {
+                            @Override
+                            public void success(RouteManager result) {
+                                result.setLogMessageHandler("temp_logger", new RouteManager.MessageHandler() {
+                                    @Override
+                                    public void process(Message message) {
+                                        tempData.add(message);
+                                    }
+                                });
+                            }
+                        });
+                        timerModule.scheduleTask(new Timer.Task() {
+                            @Override
+                            public void commands() {
+                                tempModule.readTemperature();
+                            }
+                        }, 500, false).onComplete(new AsyncOperation.CompletionHandler<Timer.Controller>() {
+                            @Override
+                            public void success(Timer.Controller result) {
+                                logModule.startLogging();
+                                result.start();
+                            }
+                        });
 
-                    loggingController.addTrigger(LoggingTrigger.TEMPERATURE);
-                    tempController.enableSampling().withSamplingPeriod(500).withSilentMode().commit();
-                }
-
-                @Override
-                public void processData(double offset, LogEntry entry) {
-                    tempData.add(new double[] {offset, BytesInterpreter.bytesToTemp(entry.data())});
+                    } catch (UnsupportedModuleException e) {
+                        Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                    }
                 }
 
                 @Override
@@ -482,10 +500,18 @@ public class LoggingFragment extends ModuleFragment {
                     File tempFile= LoggingFragment.this.getActivity().getFileStreamPath("Temperature_Data.csv");
                     File[] dataFiles= new File[] {tempFile};
 
+                    Calendar first= null;
                     FileOutputStream fos= new FileOutputStream(tempFile);
                     fos.write(String.format("%s%n", CSV_HEADER_TEMP).getBytes());
-                    for(double[] it: tempData) {
-                        fos.write(String.format(Locale.US, "%.3f,%.3f%n", it[0], it[1]).getBytes());
+                    for(Message it: tempData) {
+                        double offset;
+                        if (first == null) {
+                            first= it.getTimestamp();
+                            offset= 0;
+                        } else {
+                            offset= (it.getTimestamp().getTimeInMillis() - first.getTimeInMillis()) / 1000.0;
+                        }
+                        fos.write(String.format(Locale.US, "%.3f,%.3f%n", offset, it.getData(Float.class)).getBytes());
                     }
                     fos.close();
 
@@ -493,16 +519,17 @@ public class LoggingFragment extends ModuleFragment {
                 }
             }
     };
-    
-    private Logging loggingController;
+
     private ProgressDialog logDLProgress= null;
-    
-    /* (non-Javadoc)
-     * @see com.mbientlab.metawear.app.ModuleFragment#controllerReady(com.mbientlab.metawear.api.MetaWearController)
-     */
+
     @Override
-    public void controllerReady(MetaWearController mwController) {
-        loggingController= (Logging) mwController.getModuleController(Module.LOGGING);
+    public void connected(MetaWearBoard currBoard) {
+        this.currBoard= currBoard;
+    }
+
+    @Override
+    public void disconnected() {
+
     }
 
     @Override
@@ -547,9 +574,8 @@ public class LoggingFragment extends ModuleFragment {
         view.findViewById(R.id.button1).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mwMnger.controllerReady()) {
-                    mwMnger.getCurrentController().addModuleCallback(sensors[sensorIndex]);
-                    sensors[sensorIndex].setupLogger();
+                if (currBoard != null && currBoard.isConnected()) {
+                    sensors[sensorIndex].setup();
                 } else {
                     Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
                 }
@@ -559,16 +585,8 @@ public class LoggingFragment extends ModuleFragment {
         view.findViewById(R.id.button2).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mwMnger.controllerReady()) {
-                    mwMnger.getCurrentController().addModuleCallback(sensors[sensorIndex]);
+                if (currBoard != null && currBoard.isConnected()) {
                     sensors[sensorIndex].stopSensors();
-                
-                    if (sensors[sensorIndex].dataReady()) {
-                        startEmailIntent();
-                    } else {
-                        loggingController.stopLogging();
-                        loggingController.readTotalEntryCount();
-                    }
                 } else {
                     Toast.makeText(getActivity(), R.string.error_connect_board, Toast.LENGTH_LONG).show();
                 }
@@ -577,16 +595,22 @@ public class LoggingFragment extends ModuleFragment {
     }
     
     private void startEmailIntent() {
-        mwMnger.getCurrentController().removeModuleCallback(sensors[sensorIndex]);
-        
         ArrayList<Uri> fileUris= new ArrayList<>();
-        
+
+        logDLProgress= new ProgressDialog(getActivity());
+        logDLProgress.setOwnerActivity(getActivity());
+        logDLProgress.setTitle("Saving to file");
+        logDLProgress.setMessage("Saving...");
+        logDLProgress.setIndeterminate(true);
+        logDLProgress.show();
+
         try {
             for(File it: sensors[sensorIndex].saveDataToFile()) {
                 fileUris.add(FileProvider.getUriForFile(getActivity(), 
                         "com.mbientlab.metawear.app.fileprovider", it));
             }
-            
+
+            logDLProgress.dismiss();
             Intent intent = new Intent(Intent.ACTION_SEND_MULTIPLE);
             intent.setType("text/plain");
             intent.putExtra(Intent.EXTRA_SUBJECT, String.format(Locale.US, 
@@ -596,6 +620,7 @@ public class LoggingFragment extends ModuleFragment {
             intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, fileUris);
             startActivity(Intent.createChooser(intent, "Send email..."));
         } catch (IOException e) {
+            logDLProgress.dismiss();
             // TODO Auto-generated catch block
             e.printStackTrace();
         }

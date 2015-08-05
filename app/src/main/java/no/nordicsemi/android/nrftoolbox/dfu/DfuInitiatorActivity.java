@@ -80,8 +80,6 @@ package no.nordicsemi.android.nrftoolbox.dfu;
 
 import java.util.UUID;
 
-import com.mbientlab.metawear.api.GATT;
-
 import no.nordicsemi.android.nrftoolbox.scanner.ScannerFragment;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
@@ -93,6 +91,7 @@ import android.support.v4.app.FragmentActivity;
  * selected device using {@link DfuService}.
  */
 public class DfuInitiatorActivity extends FragmentActivity implements ScannerFragment.OnDeviceSelectedListener {
+	private final static UUID METAWEAR_SERVICE= UUID.fromString("326A9000-85CB-9195-D9DD-464CFBBAE75A");
 
 	@Override
 	protected void onCreate(final Bundle savedInstanceState) {
@@ -105,7 +104,7 @@ public class DfuInitiatorActivity extends FragmentActivity implements ScannerFra
 
 		if (savedInstanceState == null) {
 			final ScannerFragment fragment = ScannerFragment.getInstance(this, 
-			        new UUID[] {GATT.GATTService.METAWEAR.uuid(), DfuService.DFU_SERVICE_UUID}, true);
+			        new UUID[] {METAWEAR_SERVICE, DfuService.DFU_SERVICE_UUID}, true);
 			fragment.show(getSupportFragmentManager(), null);
 		}
 	}
