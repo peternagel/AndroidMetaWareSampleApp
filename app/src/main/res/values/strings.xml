@@ -1,195 +1,205 @@
-<?xml version="1.0" encoding="utf-8"?>
 <!--
-Copyright 2014 MbientLab Inc. All rights reserved.
+  ~ Copyright 2015 MbientLab Inc. All rights reserved.
+  ~
+  ~ IMPORTANT: Your use of this Software is limited to those specific rights
+  ~ granted under the terms of a software license agreement between the user who
+  ~ downloaded the software, his/her employer (which must be your employer) and
+  ~ MbientLab Inc, (the "License").  You may not use this Software unless you
+  ~ agree to abide by the terms of the License which can be found at
+  ~ www.mbientlab.com/terms . The License limits your use, and you acknowledge,
+  ~ that the  Software may not be modified, copied or distributed and can be used
+  ~ solely and exclusively in conjunction with a MbientLab Inc, product.  Other
+  ~ than for the foregoing purpose, you may not use, reproduce, copy, prepare
+  ~ derivative works of, modify, distribute, perform, display or sell this
+  ~ Software and/or its documentation for any purpose.
+  ~
+  ~ YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE
+  ~ PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+  ~ INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE,
+  ~ NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL
+  ~ MBIENTLAB OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT, NEGLIGENCE,
+  ~ STRICT LIABILITY, CONTRIBUTION, BREACH OF WARRANTY, OR OTHER LEGAL EQUITABLE
+  ~ THEORY ANY DIRECT OR INDIRECT DAMAGES OR EXPENSES INCLUDING BUT NOT LIMITED
+  ~ TO ANY INCIDENTAL, SPECIAL, INDIRECT, PUNITIVE OR CONSEQUENTIAL DAMAGES, LOST
+  ~ PROFITS OR LOST DATA, COST OF PROCUREMENT OF SUBSTITUTE GOODS, TECHNOLOGY,
+  ~ SERVICES, OR ANY CLAIMS BY THIRD PARTIES (INCLUDING BUT NOT LIMITED TO ANY
+  ~ DEFENSE THEREOF), OR OTHER SIMILAR COSTS.
+  ~
+  ~ Should you have any questions regarding your right to use this Software,
+  ~ contact MbientLab Inc, at www.mbientlab.com.
+  -->
 
-IMPORTANT: Your use of this Software is limited to those specific rights
-granted under the terms of a software license agreement between the user who 
-downloaded the software, his/her employer (which must be your employer) and 
-MbientLab Inc, (the "License").  You may not use this Software unless you 
-agree to abide by the terms of the License which can be found at 
-www.mbientlab.com/terms . The License limits your use, and you acknowledge, 
-that the  Software may not be modified, copied or distributed and can be used 
-solely and exclusively in conjunction with a MbientLab Inc, product.  Other 
-than for the foregoing purpose, you may not use, reproduce, copy, prepare 
-derivative works of, modify, distribute, perform, display or sell this 
-Software and/or its documentation for any purpose.
-
-YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE 
-PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
-INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE, 
-NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL 
-MBIENTLAB OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT, NEGLIGENCE, 
-STRICT LIABILITY, CONTRIBUTION, BREACH OF WARRANTY, OR OTHER LEGAL EQUITABLE 
-THEORY ANY DIRECT OR INDIRECT DAMAGES OR EXPENSES INCLUDING BUT NOT LIMITED 
-TO ANY INCIDENTAL, SPECIAL, INDIRECT, PUNITIVE OR CONSEQUENTIAL DAMAGES, LOST 
-PROFITS OR LOST DATA, COST OF PROCUREMENT OF SUBSTITUTE GOODS, TECHNOLOGY, 
-SERVICES, OR ANY CLAIMS BY THIRD PARTIES (INCLUDING BUT NOT LIMITED TO ANY 
-DEFENSE THEREOF), OR OTHER SIMILAR COSTS.
-
-Should you have any questions regarding your right to use this Software, 
-contact MbientLab Inc, at www.mbientlab.com.
- 
--->
 <resources>
-    <string name="app_name">MetaWear</string>
-    <string name="label_mac_address">MAC Address</string>
-    <string name="label_accelerometer">Accelerometer</string>
-    <string name="label_accelerometer_data">Accelerometer Data</string>
-    <string name="label_led_state">LED State</string>
-    <string name="label_led_color">LED Color</string>
-    <string name="label_orientation">Orientation</string>
-    <string name="label_switch">Switch</string>
-    <string name="label_serial_number">Serial Number</string>
-    <string name="label_manufacturer">Manufacturer</string>
-    <string name="label_firmware_version">Firmware Version</string>
-    <string name="label_hardware_version">Hardware Version</string>
-    <string name="label_temperature"><b><i>Temperature</i></b></string>
-    <string name="label_battery_level"><b><i>Battery Level</i></b></string>
-    <string name="label_remote_rssi"><b><i>Remote RSSI</i></b></string>
-    <string name="label_reset"><b><i>Reset</i></b></string>
-    <string name="label_freefall_status">In Free Fall</string>
-    <string name="label_led_red">Red</string>
-    <string name="label_led_green">Green</string>
-    <string name="label_led_blue">Blue</string>
-    <string name="label_commands">Commands</string>
-    
-    <string name="text_connected">Device Connected</string>
-    <string name="text_lost_connection">Connection Lost</string>
-    <string name="text_reset">Reset Issued</string>
-    
-    <string name="mw_about_text">The MetaWear app provides a GUI for interacting with a MetaWear board and serves as an example on how to use the MetaWear API.</string>
+  <string name="app_name">MetaWear</string>
 
-    <string name="font_path">fonts/trebucbd.ttf</string>
-    <string name="normal_font_path">fonts/trebuc.ttf</string>
-    
-    <string name="permission_log_label">read and write log</string>
-    <string name="permission_log_description">Allows the app to write and read from Nordic Semiconductor Event log</string>
-    
-    <string name="action_about">About</string>
-    <string name="action_settings">Settings</string>
-    <string name="action_connect">CONNECT</string>
-    <string name="action_select">SELECT DEVICE</string>
-    <string name="action_disconnect">DISCONNECT</string>
-    
-    <string name="drawer_open">Open</string>
-    <string name="drawer_close">Close</string>
-    <string name="drawer_plugins">PLUGINS</string>
-    <string name="drawer_plugin_mcp">nRF Master Control Panel</string>
-    
-    <string name="battery">%d%%</string>
-    <string name="progress">%d%%</string>
-    <string name="not_available">n/a</string>
-    <string name="not_available_value">" - "</string>
-    <string name="no_ble">Device doesn\'t have BLE support!</string>
-    <string name="no_apps">No profiles found.</string>
-    <string name="not_supported">The device does not have required services.</string>
-    <string name="no_application">Web Borswer application is not available.</string>
-    <string name="scanner_title">Select device:</string>
-    <string name="scanner_empty">No device found</string>
-    <string name="scanner_action_scan">Scan</string>
-    <string name="scanner_action_cancel">Cancel</string>
-    <string name="scanner_subtitle_bonded">BONDED DEVICES:</string>
-    <string name="scanner_subtitle__not_bonded">AVAILABLE DEVICES:</string>
-    
-    <string name="bonding">Bonding with the device&#8230;</string>
-    <string name="bonded">The device is now bonded.</string>
-    
-    <string name="about_title">About</string>
-    <string name="about_version">\n\nVersion: %s</string>
-    <string name="about_text">The nRF Toolbox is a container application that stores your Nordic Semiconductor apps in one location.</string>
-    <string name="label_connect">Connect</string>
-    <string name="label_disconnect">Disconnect</string>
-    <string name="label_dfu">DFU</string>
-    <string name="label_led_on">ON</string>
-    <string name="label_led_blink">BLINK</string>
-    <string name="label_led_off">OFF</string>
-    <string name="label_dfu_button">Launches the DFU activity</string>
-    <string name="label_ibeacon_uuid">UUID</string>
-    <string name="label_ibeacon_major">Major</string>
-    <string name="label_ibeacon_minor">Minor</string>
-    <string name="label_ibeacon_rx">RX Power</string>
-    <string name="label_ibeacon_tx">TX Power</string>
-    <string name="label_ibeacon_period">Period</string>
-    <string name="label_haptic_freq">Frequency</string>
-    <string name="label_led_on_intensity">On Intensity</string>
-    <string name="label_led_off_intensity">Off Intensity</string>
-    <string name="label_led_pulse_rise">Pulse Rise</string>
-    <string name="label_led_pulse_on">Pulse On</string>
-    <string name="label_led_pulse_fall">Pulse Fall</string>
-    <string name="label_led_pulse_period">Pulse Period</string>
-    <string name="label_led_pulse_offset">Pulse Offset</string>
-    <string name="label_led_pulse_repeat">Repeat Count</string>
-    <string name="label_led_pattern">Pattern</string>
-    <string name="label_led_color_channel">Color Channel</string>
-    <string name="label_led_high_intensity">High Intensity</string>
-    <string name="label_led_low_intensity">Low Intensity</string>
-    <string name="label_thermister_mode">Thermistor Mode</string>
-    <string name="action_start">Start</string>
-    <string name="action_stop">Stop</string>
-    <string name="title_temp_polling">Temperature Polling</string>
-    
-    <string name="label_enable">Enable</string>
-    <string name="label_disable">Disable</string>
-    <string name="label_set">Set</string>
-    <string name="label_clear">Clear</string>
-    <string name="label_stop">Stop</string>
-    
-    <string name="label_led_write">Write</string>
-    <string name="label_led_stop_description">Stops the LED pattern</string>
-    <string name="label_led_play_description">Plays the LED pattern</string>
-    <string name="label_led_pause_description">Pauses the LED pattern</string>
+  <string name="action_reset">Reset</string>
+  <string name="action_scan">Scan</string>
+  <string name="action_cancel">Cancel</string>
+  <string name="action_disconnect">Disconnect</string>
 
-    <string name="label_lob_start_message">Logging started</string>
-    <string name="label_log_start">Log</string>
-    <string name="label_log_save">Save</string>
-    <string name="label_log_help">Select a sensor you wish to log.  Press the Log button to begin logging and the Save button to download and email the data.  
-        For the best results, your device should be on Android 4.4 or higher and you should disconnect after each log download.  
-        The screen\'s orientation will be locked while the panel is active.</string>
-    
-    <string name="label_neopixel_strand">Strand</string>
-    <string name="label_neopixel_num_leds"># of LEDs</string>
-    <string name="label_neopixel_strand_speed">Strand Speed</string>
-    <string name="label_neopixel_color_ordering">Color Ordering</string>
-    <string name="label_neopixel_initialize">Initialize</string>
-    <string name="label_neopixel_free">Free</string>
-    <string name="label_neopixel_patterns">Patterns</string>
-    <string name="label_neopixel_direction">Direction</string>
-    <string name="label_neopixel_rotation_period">Rotation Period</string>
-    <string name="label_neopixel_rotation_period_hint">Period (ms)</string>
-    <string name="label_neopixel_rotate_start">Rotate</string>
-    
-    <string name="label_accelerometer_detection">Detection</string>
-    <string name="label_accelerometer_sampling">Sampling</string>
-    
-    <string name="label_event_program">Program</string>
-    <string name="label_event_erase">Erase</string>
-    
-    <string name="label_haptic_motor">Run Motor</string>
-    <string name="label_haptic_buzzer">Run Buzzer</string>
-    <string name="label_haptic_duty_cycle">Duty Cycle</string>
-    <string name="label_haptic_duty_cycle_hint">[0, 100] percent</string>
-    <string name="label_haptic_pulse_width">Pulse Width</string>
-    <string name="label_haptic_pulse_width_hint">[0, 65535] ms</string>
-    
-    <string name="label_gpio_pin">GPIO Pin</string>
-    <string name="label_gpio_analog_input">Analog Input</string>
-    <string name="label_gpio_abs_reference">Abs Reference</string>
-    <string name="label_gpio_supply_ratio">Supply Ratio</string>
-    <string name="label_gpio_digital_input">Digital Input</string>
-    <string name="label_gpio_pull_mode">Pull Mode</string>
-    <string name="label_gpio_digital_output">Digital Output</string>
-    <string name="label_gpio_read">Read</string>
-    <string name="label_gpio_value">Value</string>
-    
-    <string name="label_settings_device_name">Device Name</string>
-    <string name="label_settings_device_name_hint">8 ASCII Chars</string>
-    <string name="label_settings_advertising_interval">Advertising Interval</string>
-    <string name="label_settings_advertising_interval_hint">[0, 65535] ms</string>
-    <string name="label_settings_advertising_timeout">Advertising Timeout</string>
-    <string name="label_settings_advertising_timeout_hint">[0, 180] s</string>
-    <string name="label_settings_tx_power">TX Power</string>
-    <string name="label_settings_tx_power_hint">4, 0, -4, -8, -12, -16, -20, -30</string>
-    
-    <string name="error_thermistor_pins">Enter valid numbers for the analog and pulldown GPIO pins</string>
-    <string name="error_connect_board">Connect to a board before using the app\'s features</string>
+  <string name="description_rssi">Visual representation of the RSSI value</string>
+  <string name="description_edit">Button that opens the edit popup</string>
+  <string name="description_help">Opens up a help menu for the config setting</string>
+
+  <string name="title_error">Error</string>
+  <string name="title_select_device">Select Device</string>
+  <string name="title_connecting">Connecting…</string>
+  <string name="title_reconnect_attempt">Attempting to reconnect…</string>
+
+  <string name="message_soft_reset">Soft reset issued</string>
+  <string name="message_wait">Please wait</string>
+
+  <string name="error_soft_reset">Cannot issue soft reset</string>
+  <string name="error_fragment_bus">must implement the FragmentBus interface</string>
+  <string name="error_unsupported_module">module (sensor) is not supported on this board</string>
+
+  <string name="config_name_data_pin">Data Pin</string>
+  <string name="config_name_pulldown_pin">Pulldown Pin</string>
+  <string name="config_name_active">Active</string>
+  <string name="config_name_temp_source">Temperature Source</string>
+  <string name="config_desc_temp_source">Source the temperature sensor is reading data from</string>
+  <string name="config_name_gpio_pin">Gpio Pin</string>
+  <string name="config_desc_gpio_pin">Gpio pin number the panel is interacting with</string>
+  <string name="config_name_pull_mode">Pull Mode</string>
+  <string name="config_desc_pull_mode">Pull mode used to ensure an input signal is in a valid logic range</string>
+  <string name="config_name_output_control">Output Control</string>
+  <string name="config_desc_output_control">Set the output voltage to logical high, or clear to a logical low</string>
+  <string name="config_name_gpio_read_mode">Read Mode</string>
+  <string name="config_desc_gpio_read_mode">How to read the input data from the gpio pin</string>
+  <string name="config_name_ad_device_name">Device Name</string>
+  <string name="config_desc_ad_device_name">Set the advertising name</string>
+  <string name="config_name_ad_interval">Advertising Interval</string>
+  <string name="config_desc_ad_interval">Interval between consecutive advertising packets, in milliseconds</string>
+  <string name="config_name_ad_timeout">Advertising Timeout</string>
+  <string name="config_desc_ad_timeout">Advertising timeout, in milliseconds</string>
+  <string name="config_name_ad_tx">Advertising Tx Power</string>
+  <string name="config_desc_ad_tx">Advertising transmitting power</string>
+
+  <string name="config_name_ibeacon_uuid">UUID</string>
+  <string name="config_desc_ibeacon_uuid">UUID the IBeacon advertises as</string>
+  <string name="config_name_ibeacon_major">Major</string>
+  <string name="config_desc_ibeacon_major">IBeacon advertising major number</string>
+  <string name="config_name_ibeacon_minor">Minor</string>
+  <string name="config_desc_ibeacon_minor">IBeacon advertising minor number</string>
+  <string name="config_name_ibeacon_rx">Rx Power</string>
+  <string name="config_desc_ibeacon_rx">IBeacon advertising rx power</string>
+  <string name="config_name_ibeacon_tx">Tx Power</string>
+  <string name="config_desc_ibeacon_tx">IBeacon advertising tx power</string>
+  <string name="config_name_ibeacon_period">Period</string>
+  <string name="config_desc_ibeacon_period">IBeacon advertising period</string>
+
+  <string name="config_name_neopixel_strand">Strand</string>
+  <string name="config_desc_neopixel_strand">ID representing the strand</string>
+  <string name="config_name_neopixel_data_pin">Data Pin</string>
+  <string name="config_desc_neopixel_data_pin">Gpio pin number the NeoPixel data pin is connected to</string>
+  <string name="config_name_neopixel_n_leds">Number of LEDs</string>
+  <string name="config_desc_neopixel_n_leds">Number of LEDs to use on the strand</string>
+  <string name="config_name_neopixel_strand_speed">Strand Speed</string>
+  <string name="config_desc_neopixel_strand_speed">Operating speed of the stand</string>
+  <string name="config_name_neopixel_color_ordering">Color Ordering</string>
+  <string name="config_desc_neopixel_color_ordering">Ordering for setting the LED colors</string>
+  <string name="config_name_neopixel_color_pattern">Pattern</string>
+  <string name="config_desc_neopixel_color_pattern">LED pattern to set on the strand</string>
+  <string name="config_name_neopixel_rotation_direction">Direction</string>
+  <string name="config_desc_neopixel_rotation_direction">Direction to rotate the LED pattern, from the perspective of the board</string>
+  <string name="config_name_neopixel_rotation_period">Period</string>
+  <string name="config_desc_neopixel_rotation_period">How often to rotate the pattern, in milliseconds</string>
+  <string name="config_name_haptic_duty_cycle">Duty Cycle</string>
+  <string name="config_desc_haptic_duty_cycle">Strength of the pulse, between [0 – 100], only used for the motor</string>
+  <string name="config_name_haptic_pulse_width">Pulse Width</string>
+  <string name="config_desc_haptic_pulse_width">How long to drive the motor/buzzer, in milliseconds</string>
+
+  <string-array name="values_neopixel_patterns">
+    <item>Green</item>
+    <item>Rainbow</item>
+  </string-array>
+  <string-array name="values_neopixel_rotation_direction">
+    <item>Towards</item>
+    <item>Away</item>
+  </string-array>
+  <string-array name="values_neopixel_color_ordering">
+    <item>Red, Green, Blue</item>
+    <item>Red, Blue, Green</item>
+    <item>Green, Red, Blue</item>
+    <item>Green, Blue, Red</item>
+  </string-array>
+  <string-array name="values_neopixel_strand_speed">
+    <item>Slow</item>
+    <item>Fast</item>
+  </string-array>
+  <string-array name="values_neopixel_strand_id">
+    <item>0</item>
+    <item>1</item>
+    <item>2</item>
+  </string-array>
+  <string-array name="values_gpio_pull_mode">
+    <item>Up</item>
+    <item>Down</item>
+    <item>None</item>
+  </string-array>
+  <string-array name="values_gpio_read_mode">
+    <item>ADC</item>
+    <item>Abs Reference</item>
+    <item>Digital</item>
+  </string-array>
+  <string-array name="values_gpio_output_control">
+    <item>Set</item>
+    <item>Clear</item>
+  </string-array>
+  <string-array name="values_ad_settings_tx_power">
+    <item>4</item>
+    <item>0</item>
+    <item>-4</item>
+    <item>-8</item>
+    <item>-12</item>
+    <item>-16</item>
+    <item>-20</item>
+    <item>-30</item>
+  </string-array>
+
+  <string name="label_haptic_start_motor">Start Motor</string>
+  <string name="label_haptic_start_buzzer">Start Buzzer</string>
+  <string name="label_manufacturer">Manufacturer</string>
+  <string name="label_model_number">Model Number</string>
+  <string name="label_serial_number">Serial Number</string>
+  <string name="label_firmware_revision">Firmware Revision</string>
+  <string name="label_hardware_revision">Hardware Revision</string>
+  <string name="label_mac_address">MAC Address</string>
+  <string name="label_rssi">RSSI</string>
+  <string name="label_battery_level">Battery Level</string>
+  <string name="label_switch_pressed">Pressed</string>
+  <string name="label_switch_released">Released</string>
+  <string name="label_device_section_led">Led</string>
+  <string name="label_device_section_switch">Switch</string>
+  <string name="label_device_section_haptic">Haptic</string>
+  <string name="label_device_update">Update</string>
+  <string name="label_device_reset">Reset</string>
+  <string name="label_led_red_on">Red On</string>
+  <string name="label_led_blue_on">Blue On</string>
+  <string name="label_led_green_on">Green On</string>
+  <string name="label_led_off">Off</string>
+  <string name="label_io_settings">I/O Settings</string>
+  <string name="label_gpio_pullmode_setting">Pull Mode</string>
+  <string name="label_gpio_output_setting">Output</string>
+  <string name="label_gpio_set_output">Set</string>
+  <string name="label_gpio_clear_output">Clear</string>
+  <string name="label_neopixel_initialize">Initialize</string>
+  <string name="label_neopixel_free">Free</string>
+  <string name="label_neopixel_rotate">Rotate</string>
+  <string name="label_neopixel_stop">Stop</string>
+  <string name="label_unknown_device">Unknown Device</string>
+  <string name="label_edit">Edit</string>
+  <string name="label_enable">Enable</string>
+  <string name="label_disable">Disable</string>
+  <string name="label_cancel">Cancel</string>
+  <string name="label_commit">Commit</string>
+  <string name="label_ok">OK</string>
+  <string name="label_start_sample">Start Sampling</string>
+  <string name="label_clear">Clear</string>
+  <string name="label_save">Save</string>
+
+  <string name="title_activity_navigation">NavigationActivity</string>
+
+  <string name="navigation_drawer_open">Open navigation drawer</string>
+  <string name="navigation_drawer_close">Close navigation drawer</string>
 </resources>

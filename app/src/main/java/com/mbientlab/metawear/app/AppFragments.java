@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 MbientLab Inc. All rights reserved.
+ * Copyright 2015 MbientLab Inc. All rights reserved.
  *
  * IMPORTANT: Your use of this Software is limited to those specific rights
  * granted under the terms of a software license agreement between the user who 
@@ -28,41 +28,47 @@
  * Should you have any questions regarding your right to use this Software, 
  * contact MbientLab Inc, at www.mbientlab.com.
  */
+
 package com.mbientlab.metawear.app;
 
-import java.util.TreeMap;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
 
 /**
- * @author etsai
- *
+ * Created by etsai on 8/24/2015.
  */
 public class AppFragments {
-    private static final TreeMap<String, Class<? extends ModuleFragment>> fragments;
-    private static final String[] items;
+    private static final LinkedHashMap<String, Class<? extends ModuleFragmentBase>> fragmentClasses;
+    private static final ArrayList<String> fragmentTags;
     
     static {
-        fragments= new TreeMap<>();
-        fragments.put("Device Information", DeviceInfoFragment.class);
-        fragments.put("LED", LEDFragment.class);
-        fragments.put("Accelerometer", AccelerometerFragment.class);
-        fragments.put("IBeacon", IBeaconFragment.class);
-        fragments.put("Haptic", HapticFragment.class);
-        fragments.put("Settings", SettingsFragment.class);
-        fragments.put("Neo Pixel", NeoPixelFragment.class);
-        fragments.put("Event", EventFragment.class);
-        fragments.put("Temperature", TemperatureFragment.class);
-        fragments.put("GPIO", GPIOFragment.class);
-        fragments.put("Logging", LoggingFragment.class);
+        fragmentClasses= new LinkedHashMap<>();
+        fragmentClasses.put("Home", HomeFragment.class);
+        fragmentClasses.put("Accelerometer", AccelerometerFragment.class);
+        fragmentClasses.put("Barometer", BarometerFragment.class);
+        fragmentClasses.put("Gpio", GpioFragment.class);
+        fragmentClasses.put("Gyro", GyroFragment.class);
+        fragmentClasses.put("Haptic", HapticFragment.class);
+        fragmentClasses.put("IBeacon", IBeaconFragment.class);
+        fragmentClasses.put("Light", AmbientLightFragment.class);
+        fragmentClasses.put("NeoPixel", NeoPixelFragment.class);
+        fragmentClasses.put("Settings", SettingsFragment.class);
+        fragmentClasses.put("Temperature", TemperatureFragment.class);
 
-        items= fragments.keySet().toArray(new String[fragments.size()]);
+        fragmentTags= new ArrayList<>(fragmentClasses.keySet());
     }
-    
-    public static Class<? extends ModuleFragment> getFragmentClass(String name) {
-        return fragments.get(name);
+
+    public static Class<? extends ModuleFragmentBase> findFragmentClass(String tag) {
+        return fragmentClasses.get(tag);
     }
-    
-    public static String[] items() {
-        return items;
+
+    public static List<String> getFragmentTags() {
+        return Collections.unmodifiableList(fragmentTags);
+    }
+
+    public static String getFragmentTag(int index) {
+        return fragmentTags.get(index);
     }
 }
-

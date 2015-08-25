@@ -1,241 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-Copyright 2014 MbientLab Inc. All rights reserved.
+  ~ Copyright 2015 MbientLab Inc. All rights reserved.
+  ~
+  ~ IMPORTANT: Your use of this Software is limited to those specific rights
+  ~ granted under the terms of a software license agreement between the user who
+  ~ downloaded the software, his/her employer (which must be your employer) and
+  ~ MbientLab Inc, (the "License").  You may not use this Software unless you
+  ~ agree to abide by the terms of the License which can be found at
+  ~ www.mbientlab.com/terms . The License limits your use, and you acknowledge,
+  ~ that the  Software may not be modified, copied or distributed and can be used
+  ~ solely and exclusively in conjunction with a MbientLab Inc, product.  Other
+  ~ than for the foregoing purpose, you may not use, reproduce, copy, prepare
+  ~ derivative works of, modify, distribute, perform, display or sell this
+  ~ Software and/or its documentation for any purpose.
+  ~
+  ~ YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE
+  ~ PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+  ~ INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE,
+  ~ NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL
+  ~ MBIENTLAB OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT, NEGLIGENCE,
+  ~ STRICT LIABILITY, CONTRIBUTION, BREACH OF WARRANTY, OR OTHER LEGAL EQUITABLE
+  ~ THEORY ANY DIRECT OR INDIRECT DAMAGES OR EXPENSES INCLUDING BUT NOT LIMITED
+  ~ TO ANY INCIDENTAL, SPECIAL, INDIRECT, PUNITIVE OR CONSEQUENTIAL DAMAGES, LOST
+  ~ PROFITS OR LOST DATA, COST OF PROCUREMENT OF SUBSTITUTE GOODS, TECHNOLOGY,
+  ~ SERVICES, OR ANY CLAIMS BY THIRD PARTIES (INCLUDING BUT NOT LIMITED TO ANY
+  ~ DEFENSE THEREOF), OR OTHER SIMILAR COSTS.
+  ~
+  ~ Should you have any questions regarding your right to use this Software,
+  ~ contact MbientLab Inc, at www.mbientlab.com.
+  -->
 
-IMPORTANT: Your use of this Software is limited to those specific rights
-granted under the terms of a software license agreement between the user who 
-downloaded the software, his/her employer (which must be your employer) and 
-MbientLab Inc, (the "License").  You may not use this Software unless you 
-agree to abide by the terms of the License which can be found at 
-www.mbientlab.com/terms . The License limits your use, and you acknowledge, 
-that the  Software may not be modified, copied or distributed and can be used 
-solely and exclusively in conjunction with a MbientLab Inc, product.  Other 
-than for the foregoing purpose, you may not use, reproduce, copy, prepare 
-derivative works of, modify, distribute, perform, display or sell this 
-Software and/or its documentation for any purpose.
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent">
 
-YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE 
-PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
-INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE, 
-NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL 
-MBIENTLAB OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT, NEGLIGENCE, 
-STRICT LIABILITY, CONTRIBUTION, BREACH OF WARRANTY, OR OTHER LEGAL EQUITABLE 
-THEORY ANY DIRECT OR INDIRECT DAMAGES OR EXPENSES INCLUDING BUT NOT LIMITED 
-TO ANY INCIDENTAL, SPECIAL, INDIRECT, PUNITIVE OR CONSEQUENTIAL DAMAGES, LOST 
-PROFITS OR LOST DATA, COST OF PROCUREMENT OF SUBSTITUTE GOODS, TECHNOLOGY, 
-SERVICES, OR ANY CLAIMS BY THIRD PARTIES (INCLUDING BUT NOT LIMITED TO ANY 
-DEFENSE THEREOF), OR OTHER SIMILAR COSTS.
+    <ListView
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:id="@+id/gpio_config" />
 
-Should you have any questions regarding your right to use this Software, 
-contact MbientLab Inc, at www.mbientlab.com.
--->
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/ScrollView1"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:padding="16dp" >
-
-    <LinearLayout 
+    <include layout="@layout/component_sampling_control"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center_horizontal" >
-    
-	    <LinearLayout
-	        android:layout_width="match_parent"
-	        android:layout_height="wrap_content"
-	        android:weightSum="2" >
-	
-	        <TextView
-	            android:id="@+id/textView1"
-	            android:layout_width="wrap_content"
-	            android:layout_height="wrap_content"
-	            android:layout_weight="1.50"
-	            android:labelFor="@+id/editText1"
-	            android:text="@string/label_gpio_pin" />
-	
-	        <EditText
-	            android:id="@+id/editText1"
-	            android:layout_width="wrap_content"
-	            android:layout_height="wrap_content"
-	            android:layout_weight="0.5"
-	            android:ems="10"
-	            android:inputType="number" >
-	
-	            <requestFocus android:layout_width="wrap_content" />
-	        </EditText>
-	    </LinearLayout>
-	
-	    <View
-	        android:layout_width="fill_parent"
-	        android:layout_height="1dp"
-	        android:background="@android:color/darker_gray" />
-	
-	    <TextView
-	        android:id="@+id/textView6"
-	        android:layout_width="wrap_content"
-	        android:layout_height="wrap_content"
-	        android:text="@string/label_gpio_analog_input"
-	        android:textAppearance="?android:attr/textAppearanceLarge"
-	        android:textColor="@color/actionBarColor" />
-	
-	    <LinearLayout
-	        android:layout_width="match_parent"
-	        android:layout_height="wrap_content"
-	        android:weightSum="2" >
-	
-	        <TextView
-	            android:id="@+id/textView2"
-	            android:layout_width="wrap_content"
-	            android:layout_height="wrap_content"
-	            android:layout_weight="1.50"
-	            android:text="@string/label_gpio_abs_reference" />
-	
-	        <TextView
-	            android:id="@+id/textView4"
-	            android:layout_width="wrap_content"
-	            android:layout_height="wrap_content"
-	            android:layout_weight="0.5" />
-	    </LinearLayout>
-	
-	    <LinearLayout
-	        android:layout_width="match_parent"
-	        android:layout_height="wrap_content"
-	        android:weightSum="2" >
-	
-	        <TextView
-	            android:id="@+id/textView3"
-	            android:layout_width="wrap_content"
-	            android:layout_height="wrap_content"
-	            android:layout_weight="1.50"
-	            android:text="@string/label_gpio_supply_ratio" />
-	
-	        <TextView
-	            android:id="@+id/textView5"
-	            android:layout_width="wrap_content"
-	            android:layout_height="wrap_content"
-	            android:layout_weight="0.5" />
-	    </LinearLayout>
-	
-	    <RelativeLayout
-	        style="?android:attr/buttonBarStyle"
-	        android:layout_width="match_parent"
-	        android:layout_height="wrap_content" >
-	
-	        <Button
-	            android:id="@+id/button1"
-	            style="@style/MetaWear.Button"
-	            android:layout_width="wrap_content"
-	            android:layout_height="wrap_content"
-	            android:layout_alignParentTop="true"
-	            android:layout_centerHorizontal="true"
-	            android:text="@string/label_gpio_read" />
-	    </RelativeLayout>
-	
-	    <View
-	        android:layout_width="fill_parent"
-	        android:layout_height="1dp"
-	        android:background="@android:color/darker_gray" />
-	
-	    <TextView
-	        android:id="@+id/textView11"
-	        android:layout_width="wrap_content"
-	        android:layout_height="wrap_content"
-	        android:text="@string/label_gpio_digital_input"
-	        android:textAppearance="?android:attr/textAppearanceLarge"
-	        android:textColor="@color/actionBarColor" />
-	
-	    <LinearLayout
-	        android:layout_width="match_parent"
-	        android:layout_height="wrap_content"
-	        android:weightSum="2" >
-	
-	        <TextView
-	            android:id="@+id/textView7"
-	            android:layout_width="wrap_content"
-	            android:layout_height="wrap_content"
-	            android:layout_weight="1.50"
-	            android:text="@string/label_gpio_value" />
-	
-	        <TextView
-	            android:id="@+id/textView8"
-	            android:layout_width="wrap_content"
-	            android:layout_height="wrap_content"
-	            android:layout_weight="0.5" />
-	    </LinearLayout>
-	
-	    <LinearLayout
-	        android:layout_width="match_parent"
-	        android:layout_height="wrap_content"
-	        android:weightSum="2" >
-	
-	        <TextView
-	            android:id="@+id/textView9"
-	            android:layout_width="wrap_content"
-	            android:layout_height="wrap_content"
-	            android:layout_weight="1.50"
-	            android:text="@string/label_gpio_pull_mode" />
-	
-	        <Spinner
-	            android:id="@+id/spinner2"
-	            android:layout_width="wrap_content"
-	            android:layout_height="wrap_content"
-	            android:layout_weight="0.5" />
-	    </LinearLayout>
-	
-	    <LinearLayout
-	        style="?android:attr/buttonBarStyle"
-	        android:layout_width="match_parent"
-	        android:layout_height="wrap_content"
-	        android:gravity="center" >
-	
-	        <Button
-	            android:id="@+id/button3"
-	            style="@style/MetaWear.Button"
-	            android:layout_width="wrap_content"
-	            android:layout_height="wrap_content"
-	            android:text="@string/label_gpio_read" />
-	
-	        <Button
-	            android:id="@+id/button2"
-	            style="@style/MetaWear.Button"
-	            android:layout_width="wrap_content"
-	            android:layout_height="wrap_content"
-	            android:text="@string/label_set" />
-	    </LinearLayout>
-	
-	    <View
-	        android:layout_width="fill_parent"
-	        android:layout_height="1dp"
-	        android:background="@android:color/darker_gray" />
-	
-	    <TextView
-	        android:id="@+id/textView12"
-	        android:layout_width="wrap_content"
-	        android:layout_height="wrap_content"
-	        android:text="@string/label_gpio_digital_output"
-	        android:textAppearance="?android:attr/textAppearanceLarge"
-	        android:textColor="@color/actionBarColor" />
-	
-	    <LinearLayout
-	        style="?android:attr/buttonBarStyle"
-	        android:layout_width="match_parent"
-	        android:layout_height="wrap_content"
-	        android:gravity="center" >
-	
-	        <Button
-	            android:id="@+id/button4"
-	            style="@style/MetaWear.Button"
-	            android:layout_width="wrap_content"
-	            android:layout_height="wrap_content"
-	            android:text="@string/label_set" />
-	
-	        <Button
-	            android:id="@+id/button5"
-	            style="@style/MetaWear.Button"
-	            android:layout_width="wrap_content"
-	            android:layout_height="wrap_content"
-	            android:text="@string/label_clear" />
-	    </LinearLayout>
-    </LinearLayout>
-</ScrollView>
+        android:layout_height="wrap_content" />
+    <include layout="@layout/component_data_control"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+    <include layout="@layout/component_line_chart"
+        android:layout_weight="1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+</LinearLayout>

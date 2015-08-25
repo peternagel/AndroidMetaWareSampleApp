@@ -1,89 +1,58 @@
-<resources xmlns:android="http://schemas.android.com/apk/res/android">
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Copyright 2015 MbientLab Inc. All rights reserved.
+  ~
+  ~ IMPORTANT: Your use of this Software is limited to those specific rights
+  ~ granted under the terms of a software license agreement between the user who
+  ~ downloaded the software, his/her employer (which must be your employer) and
+  ~ MbientLab Inc, (the "License").  You may not use this Software unless you
+  ~ agree to abide by the terms of the License which can be found at
+  ~ www.mbientlab.com/terms . The License limits your use, and you acknowledge,
+  ~ that the  Software may not be modified, copied or distributed and can be used
+  ~ solely and exclusively in conjunction with a MbientLab Inc, product.  Other
+  ~ than for the foregoing purpose, you may not use, reproduce, copy, prepare
+  ~ derivative works of, modify, distribute, perform, display or sell this
+  ~ Software and/or its documentation for any purpose.
+  ~
+  ~ YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE
+  ~ PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+  ~ INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE,
+  ~ NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL
+  ~ MBIENTLAB OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT, NEGLIGENCE,
+  ~ STRICT LIABILITY, CONTRIBUTION, BREACH OF WARRANTY, OR OTHER LEGAL EQUITABLE
+  ~ THEORY ANY DIRECT OR INDIRECT DAMAGES OR EXPENSES INCLUDING BUT NOT LIMITED
+  ~ TO ANY INCIDENTAL, SPECIAL, INDIRECT, PUNITIVE OR CONSEQUENTIAL DAMAGES, LOST
+  ~ PROFITS OR LOST DATA, COST OF PROCUREMENT OF SUBSTITUTE GOODS, TECHNOLOGY,
+  ~ SERVICES, OR ANY CLAIMS BY THIRD PARTIES (INCLUDING BUT NOT LIMITED TO ANY
+  ~ DEFENSE THEREOF), OR OTHER SIMILAR COSTS.
+  ~
+  ~ Should you have any questions regarding your right to use this Software,
+  ~ contact MbientLab Inc, at www.mbientlab.com.
+  -->
 
-    <style name="MetaWear" />
-    
-    <style name="MetaWear.Button">
-        <item name="android:textColor">@color/action_text</item>
-        <item name="android:background">@drawable/button_selector</item>
-    </style>
-    <!--
-        Base application theme, dependent on API level. This theme is replaced
-        by AppBaseTheme from res/values-vXX/styles.xml on newer devices.
-    -->
-    <style name="AppBaseTheme" parent="android:Theme.Light">
-        <!--
-            Theme customizations available in newer API levels can go in
-            res/values-vXX/styles.xml, while customizations related to
-            backward-compatibility can go here.
-        -->
-    </style>
-    
-    <style name="Widget" />
-    
-    <style name="Widget.ActionBar" parent="@android:style/Widget.Holo.Light.ActionBar.Solid.Inverse">
+<resources>
+    <style name="Widget.ActionBar" parent="@style/Widget.AppCompat.Light.ActionBar.Solid.Inverse">
+        <item name="background">@color/actionBarColor</item>
         <item name="android:background">@color/actionBarColor</item>
         <item name="android:backgroundStacked">@color/actionBarColor</item>
         <item name="android:backgroundSplit">@color/actionBarColor</item>
         <item name="android:displayOptions">useLogo|showHome|showTitle</item>
     </style>
 
-    <style name="Widget.ActionBar.Overflow" parent="@android:style/Widget.Holo.Light.ActionButton.Overflow">
-        <item name="android:src">@drawable/ic_menu_moreoverflow</item>
-    </style>
-
-    <style name="Widget.ListTitle">
-        <item name="android:background">@color/headerBackgroundColor</item>
-        <item name="android:textColor">@color/headerTextColor</item>
-        <item name="android:gravity">center</item>
-    </style>
-
-    <style name="Widget.ScannerSubtitle">
-        <item name="android:textColor">@color/headerBackgroundColor</item>
-        <item name="android:textStyle">bold</item>
-    </style>
-
-    <style name="Widget.Button" parent="@android:style/Widget.Holo.Light.Button">
-        <item name="android:minWidth">160dip</item>
-    </style>
-
-    <style name="Widget.Connect" parent="@android:style/Widget.Holo.Light.Button">
-        <item name="android:background">@drawable/button</item>
-        <item name="android:textColor">#FFFFFF</item>
-        <item name="android:paddingLeft">40dp</item>
-        <item name="android:paddingRight">40dp</item>
-    </style>
-
-    <style name="TextAppearance">
-        <item name="android:textSize">15sp</item>
-        <item name="android:textStyle">bold</item>
-    </style>
-
-    <style name="TextAppearance.Small">
-        <item name="android:textSize">12sp</item>
-        <item name="android:textStyle">normal</item>
-    </style>
-
-    <!-- Application theme. -->
-    <style name="AppTheme" parent="@android:style/Theme.Holo.Light">
-        <item name="android:windowBackground">@drawable/background</item>
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="homeAsUpIndicator">@drawable/ic_drawer</item>
         <item name="android:actionBarStyle">@style/Widget.ActionBar</item>
-        <item name="android:buttonStyle">@style/Widget.Button</item>
-        <item name="android:homeAsUpIndicator">@drawable/ic_ab_back_holo_dark</item>
-        <item name="android:textAppearanceListItem">@style/TextAppearance</item>
-        <item name="android:textAppearanceListItemSmall">@style/TextAppearance.Small</item>
-        <item name="android:actionOverflowButtonStyle">@style/Widget.ActionBar.Overflow</item>
-    </style>
-    
-    <style name="AppTheme.Translucent">
-        <item name="android:colorBackgroundCacheHint">@null</item>
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:windowActionBar">false</item>
-        <item name="android:windowNoTitle">true</item>
-        <item name="android:windowAnimationStyle">@android:style/Animation.Translucent</item>
+        <item name="actionBarStyle">@style/Widget.ActionBar</item>
+        <item name="android:windowBackground">@mipmap/background</item>
+
     </style>
 
-    <style name="AppTheme.Fullscreen" parent="@android:style/Theme.Holo.NoActionBar">
-        <item name="android:windowBackground">@drawable/background</item>
+    <style name="HorizontalLine">
+        <item name="android:layout_height">2dp</item>
+        <item name="android:layout_marginBottom">10dp</item>
+        <item name="android:layout_marginTop">5dp</item>
+        <item name="android:layout_width">fill_parent</item>
     </style>
 </resources>
