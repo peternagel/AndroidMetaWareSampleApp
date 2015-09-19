@@ -109,7 +109,7 @@
         android:layout_height="wrap_content"
         android:id="@+id/duty_cycle_help"
         android:background="@android:color/transparent"
-        android:src="@mipmap/ic_help"
+        android:src="@android:drawable/ic_menu_help"
         android:layout_alignTop="@+id/duty_cycle_value"
         android:layout_alignParentEnd="true"
         android:contentDescription="@string/description_help" />
@@ -120,7 +120,7 @@
         android:layout_height="wrap_content"
         android:id="@+id/pulse_width_help"
         android:background="@android:color/transparent"
-        android:src="@mipmap/ic_help"
+        android:src="@android:drawable/ic_menu_help"
         android:layout_alignTop="@+id/pulse_width_value"
         android:layout_toEndOf="@+id/duty_cycle_value"
         android:contentDescription="@string/description_help"/>

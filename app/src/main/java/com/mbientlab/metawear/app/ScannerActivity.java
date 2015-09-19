@@ -23,13 +23,13 @@ public class ScannerActivity extends AppCompatActivity implements ScannerCommuni
 
     static {
         serviceUuids= new UUID[] {
-                UUID.fromString("326a9000-85cb-9195-d9dd-464cfbbae75a")
+                MetaWearBoard.METAWEAR_SERVICE_UUID,
+                MetaWearBoard.METABOOT_SERVICE_UUID
         };
     }
 
     private MetaWearBleService.LocalBinder serviceBinder;
     private MetaWearBoard mwBoard;
-    private ProgressDialog connectDialog;
     private BleScannerFragment scannerFragment;
 
     @Override
@@ -62,7 +62,7 @@ public class ScannerActivity extends AppCompatActivity implements ScannerCommuni
     public void onDeviceSelected(final BluetoothDevice btDevice) {
         mwBoard= serviceBinder.getMetaWearBoard(btDevice);
 
-        connectDialog = new ProgressDialog(this);
+        final ProgressDialog connectDialog = new ProgressDialog(this);
         connectDialog.setTitle(getString(R.string.title_connecting));
         connectDialog.setMessage(getString(R.string.message_wait));
         connectDialog.setCancelable(false);
@@ -83,6 +83,16 @@ public class ScannerActivity extends AppCompatActivity implements ScannerCommuni
                 Intent navActivityIntent = new Intent(ScannerActivity.this, NavigationActivity.class);
                 navActivityIntent.putExtra(NavigationActivity.EXTRA_BT_DEVICE, btDevice);
                 startActivityForResult(navActivityIntent, REQUEST_START_APP);
+            }
+
+            @Override
+            public void disconnected() {
+                mwBoard.connect();
+            }
+
+            @Override
+            public void failure(int status, Throwable error) {
+                mwBoard.connect();
             }
         });
         mwBoard.connect();

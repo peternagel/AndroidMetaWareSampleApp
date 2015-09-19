@@ -41,13 +41,29 @@
   <string name="description_edit">Button that opens the edit popup</string>
   <string name="description_help">Opens up a help menu for the config setting</string>
 
+  <string name="title_firmware_update">Firmware Update</string>
+  <string name="title_warning">Warning</string>
   <string name="title_error">Error</string>
   <string name="title_select_device">Select Device</string>
-  <string name="title_connecting">Connecting…</string>
-  <string name="title_reconnect_attempt">Attempting to reconnect…</string>
+  <string name="title_connecting">Connecting</string>
+  <string name="title_reconnect_attempt">Reconnecting</string>
+
+  <string name="notify_dfu_bootloader">Entering Bootloader Mode</string>
+  <string name="notify_dfu_starting">Starting Update</string>
+  <string name="notify_dfu_validating">Validating</string>
+  <string name="notify_dfu_disconnecting">Disconnecting</string>
+  <string name="notify_dfu_uploading">Uploading</string>
+  <string name="notify_dfu_success">DFU Succeeded</string>
+  <string name="notify_dfu_fail">DFU Failed</string>
 
   <string name="message_soft_reset">Soft reset issued</string>
   <string name="message_wait">Please wait</string>
+  <string name="message_dfu_accept">Do you wish to proceed with the firmware update?</string>
+  <string name="message_dfu">Updating the firmware to the latest version, please wait</string>
+  <string name="message_dfu_success">Firmware successfully updated to the latest version</string>
+  <string name="message_dfu_fail">Firmware failed to update.</string>
+  <string name="message_metaboot">Your device is in MetaBoot mode.  Typically the board will reset itself back to normal operation
+  in a minute.  In the case where it is stuck in MetaBoot mode, you can manually return the board to normal by initiating a firmware update.</string>
 
   <string name="error_soft_reset">Cannot issue soft reset</string>
   <string name="error_fragment_bus">must implement the FragmentBus interface</string>
@@ -157,6 +173,7 @@
     <item>-30</item>
   </string-array>
 
+  <string name="label_device_information">Device Information</string>
   <string name="label_haptic_start_motor">Start Motor</string>
   <string name="label_haptic_start_buzzer">Start Buzzer</string>
   <string name="label_manufacturer">Manufacturer</string>
@@ -172,7 +189,7 @@
   <string name="label_device_section_led">Led</string>
   <string name="label_device_section_switch">Switch</string>
   <string name="label_device_section_haptic">Haptic</string>
-  <string name="label_device_update">Update</string>
+  <string name="label_device_update">Update Firmware</string>
   <string name="label_device_reset">Reset</string>
   <string name="label_led_red_on">Red On</string>
   <string name="label_led_blue_on">Blue On</string>
@@ -197,6 +214,10 @@
   <string name="label_start_sample">Start Sampling</string>
   <string name="label_clear">Clear</string>
   <string name="label_save">Save</string>
+  <string name="label_yes">Yes</string>
+  <string name="label_no">No</string>
+  <string name="label_sodium">N/A</string>
+  <string name="label_zero_percent">0%</string>
 
   <string name="title_activity_navigation">NavigationActivity</string>
 

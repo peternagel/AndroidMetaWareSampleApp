@@ -57,12 +57,12 @@ import java.util.Locale;
 public abstract class ModuleFragmentBase extends Fragment implements ServiceConnection {
     public interface FragmentBus {
         BluetoothDevice getBtDevice();
-        void resetConnectionStateHandler();
+        void resetConnectionStateHandler(long delay);
     }
 
+    private boolean boardReady= false;
     protected MetaWearBoard mwBoard;
     protected FragmentBus fragBus;
-    private boolean isSupported= true;
     protected String sensor;
 
     protected abstract void boardReady() throws UnsupportedModuleException;
@@ -85,11 +85,23 @@ public abstract class ModuleFragmentBase extends Fragment implements ServiceConn
     }
 
     @Override
+    public void onDestroy() {
+        super.onDestroy();
+
+        ///< Unbind the service when the activity is destroyed
+        getActivity().getApplicationContext().unbindService(this);
+    }
+
+    @Override
     public void onViewCreated(final View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        if (!isSupported) {
-            enableDisableViewGroup((ViewGroup) getView(), false);
+        if (boardReady) {
+            try {
+                boardReady();
+            } catch (UnsupportedModuleException e) {
+                unsupportedModule();
+            }
         }
     }
 
@@ -97,6 +109,7 @@ public abstract class ModuleFragmentBase extends Fragment implements ServiceConn
     public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
         mwBoard= ((MetaWearBleService.LocalBinder) iBinder).getMetaWearBoard(fragBus.getBtDevice());
         try {
+            boardReady= true;
             boardReady();
         } catch (UnsupportedModuleException e) {
             unsupportedModule();
@@ -108,12 +121,9 @@ public abstract class ModuleFragmentBase extends Fragment implements ServiceConn
 
     }
 
-    public void reconnected() {
-
-    }
+    public void reconnected() { }
 
     private void unsupportedModule() {
-        isSupported= false;
         new AlertDialog.Builder(getActivity()).setTitle(R.string.title_error)
                 .setMessage(String.format("%s %s", sensor, getActivity().getString(R.string.error_unsupported_module)))
                 .setCancelable(false)

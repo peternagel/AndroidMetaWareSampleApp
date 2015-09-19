@@ -53,8 +53,8 @@ import java.util.ArrayList;
  * Created by etsai on 8/19/2015.
  */
 public abstract class SensorFragment extends ModuleFragmentBase {
-    private static final float FPS= 25.f, UPDATE_FREQ = 1 / FPS;
-    private static final int UPDATE_PERIOD= (int) (1 / UPDATE_FREQ);
+    private static final float FPS= 30.f;
+    private static final long UPDATE_PERIOD= (long) ((1 / FPS) * 1000L);
 
     protected final ArrayList<String> chartXValues= new ArrayList<>();
     protected ViewGroup fragContainer;
@@ -94,15 +94,6 @@ public abstract class SensorFragment extends ModuleFragmentBase {
             chart.moveViewToX(sampleCount);
         }
     }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-
-        ///< Unbind the service when the activity is destroyed
-        getActivity().getApplicationContext().unbindService(this);
-    }
-
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,

@@ -45,14 +45,13 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceLarge"
-            android:text="Device Information"
+            android:text="@string/label_device_information"
             android:id="@+id/textView5"
             android:layout_gravity="center_horizontal" />
 
         <TableLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:stretchColumns="1" >
+            android:layout_height="match_parent" >
 
             <TableRow
                 android:layout_width="match_parent"
@@ -63,14 +62,16 @@
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:attr/textAppearanceMedium"
                     android:text="@string/label_manufacturer"
-                    android:id="@+id/Manufacturer_text" />
+                    android:id="@+id/Manufacturer_text"
+                    android:layout_weight="1"/>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:attr/textAppearanceMedium"
                     android:gravity="center_horizontal"
-                    android:id="@+id/manufacturer_value" />
+                    android:id="@+id/manufacturer_value"
+                    android:layout_weight="1" />
 
             </TableRow>
 
@@ -83,14 +84,16 @@
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:attr/textAppearanceMedium"
                     android:text="@string/label_model_number"
-                    android:id="@+id/model_number_text" />
+                    android:id="@+id/model_number_text"
+                    android:layout_weight="1"/>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:attr/textAppearanceMedium"
                     android:gravity="center_horizontal"
-                    android:id="@+id/model_number_value" />
+                    android:id="@+id/model_number_value"
+                    android:layout_weight="1"/>
             </TableRow>
 
             <TableRow
@@ -102,14 +105,16 @@
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:attr/textAppearanceMedium"
                     android:text="@string/label_serial_number"
-                    android:id="@+id/serial_number_text" />
+                    android:id="@+id/serial_number_text"
+                    android:layout_weight="1"/>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:attr/textAppearanceMedium"
                     android:gravity="center_horizontal"
-                    android:id="@+id/serial_number_value" />
+                    android:id="@+id/serial_number_value"
+                    android:layout_weight="1"/>
             </TableRow>
 
             <TableRow
@@ -121,14 +126,16 @@
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:attr/textAppearanceMedium"
                     android:text="@string/label_firmware_revision"
-                    android:id="@+id/firmware_revision_text" />
+                    android:id="@+id/firmware_revision_text"
+                    android:layout_weight="1"/>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:attr/textAppearanceMedium"
                     android:gravity="center_horizontal"
-                    android:id="@+id/firmware_revision_value" />
+                    android:id="@+id/firmware_revision_value"
+                    android:layout_weight="1"/>
             </TableRow>
 
             <TableRow
@@ -140,14 +147,16 @@
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:attr/textAppearanceMedium"
                     android:text="@string/label_hardware_revision"
-                    android:id="@+id/hardware_revision_text" />
+                    android:id="@+id/hardware_revision_text"
+                    android:layout_weight="1"/>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:attr/textAppearanceMedium"
                     android:gravity="center_horizontal"
-                    android:id="@+id/hardware_revision_value" />
+                    android:id="@+id/hardware_revision_value"
+                    android:layout_weight="1"/>
             </TableRow>
 
             <TableRow
@@ -159,14 +168,16 @@
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:attr/textAppearanceMedium"
                     android:text="@string/label_mac_address"
-                    android:id="@+id/device_mac_address_text" />
+                    android:id="@+id/device_mac_address_text"
+                    android:layout_weight="1"/>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:attr/textAppearanceMedium"
                     android:gravity="center_horizontal"
-                    android:id="@+id/device_mac_address_value" />
+                    android:id="@+id/device_mac_address_value"
+                    android:layout_weight="1"/>
             </TableRow>
 
             <TableRow
@@ -179,14 +190,16 @@
                     android:textAppearance="?android:attr/textAppearanceMedium"
                     android:text="@string/label_rssi"
                     android:textColor="@color/action_text"
-                    android:id="@+id/board_rssi_text" />
+                    android:id="@+id/board_rssi_text"
+                    android:layout_weight="1"/>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:attr/textAppearanceMedium"
                     android:gravity="center_horizontal"
-                    android:id="@+id/board_rssi_value" />
+                    android:id="@+id/board_rssi_value"
+                    android:layout_weight="1"/>
             </TableRow>
 
             <TableRow
@@ -199,14 +212,16 @@
                     android:textAppearance="?android:attr/textAppearanceMedium"
                     android:text="@string/label_battery_level"
                     android:textColor="@color/action_text"
-                    android:id="@+id/board_battery_level_text" />
+                    android:id="@+id/board_battery_level_text"
+                    android:layout_weight="1"/>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:attr/textAppearanceMedium"
                     android:gravity="center_horizontal"
-                    android:id="@+id/board_battery_level_value" />
+                    android:id="@+id/board_battery_level_value"
+                    android:layout_weight="1"/>
             </TableRow>
 
         </TableLayout>
@@ -218,17 +233,8 @@
             android:text="@string/label_device_update"
             style="?android:attr/buttonBarButtonStyle"
             android:textAppearance="?android:attr/textAppearanceLarge"
+            android:layout_gravity="center"
             android:id="@+id/update_firmware" />
-
-        <!--
-        <Button
-                android:layout_weight="1"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                style="?android:attr/buttonBarButtonStyle"
-                android:text="@string/label_device_reset"
-                android:id="@+id/reset_board" />
-        -->
 
         <View
             style="@style/HorizontalLine"
@@ -256,7 +262,8 @@
                 <RadioButton android:id="@+id/switch_radio_pressed"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/label_switch_pressed" />
+                    android:text="@string/label_switch_pressed"
+                    android:checked="false" />
             </LinearLayout>
 
             <LinearLayout
@@ -268,7 +275,8 @@
                 <RadioButton android:id="@+id/switch_radio_released"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/label_switch_released" />
+                    android:text="@string/label_switch_released"
+                    android:checked="false" />
             </LinearLayout>
         </RadioGroup>
 

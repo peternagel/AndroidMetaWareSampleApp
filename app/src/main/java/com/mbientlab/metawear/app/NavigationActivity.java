@@ -31,13 +31,17 @@
 
 package com.mbientlab.metawear.app;
 
+import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.bluetooth.BluetoothDevice;
 import android.content.ComponentName;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.os.Handler;
 import android.os.IBinder;
+import android.support.annotation.NonNull;
+import android.support.v4.app.DialogFragment;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.app.ActionBar;
@@ -55,17 +59,91 @@ import com.mbientlab.metawear.MetaWearBoard.ConnectionStateHandler;
 import com.mbientlab.metawear.UnsupportedModuleException;
 import com.mbientlab.metawear.module.Debug;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 public class NavigationActivity extends AppCompatActivity implements NavigationDrawerFragment.NavigationDrawerCallbacks, SensorFragment.FragmentBus, ServiceConnection {
     public static final String EXTRA_BT_DEVICE= "com.mbientlab.metawear.app.NavigationActivity.EXTRA_BT_DEVICE";
 
-    private ProgressDialog reconnectProgress= null;
+    private static final Map<String, Class<? extends ModuleFragmentBase>> FRAGMENT_CLASSES;
+    private static final List<String> FRAGMENT_TAGS;
+
+    static {
+        Map<String, Class<? extends ModuleFragmentBase>> tempMap= new LinkedHashMap<>();
+        tempMap.put("Home", HomeFragment.class);
+        tempMap.put("Accelerometer", AccelerometerFragment.class);
+        tempMap.put("Barometer", BarometerFragment.class);
+        tempMap.put("Gpio", GpioFragment.class);
+        tempMap.put("Gyro", GyroFragment.class);
+        tempMap.put("Haptic", HapticFragment.class);
+        tempMap.put("IBeacon", IBeaconFragment.class);
+        tempMap.put("Light", AmbientLightFragment.class);
+        tempMap.put("NeoPixel", NeoPixelFragment.class);
+        tempMap.put("Settings", SettingsFragment.class);
+        tempMap.put("Temperature", TemperatureFragment.class);
+        FRAGMENT_CLASSES= Collections.unmodifiableMap(tempMap);
+
+        FRAGMENT_TAGS= Collections.unmodifiableList(new ArrayList<>(tempMap.keySet()));
+    }
+
+    public static class ReconnectDialogFragment extends DialogFragment implements  ServiceConnection {
+        private static final String KEY_BLUETOOTH_DEVICE= "com.mbientlab.metawear.app.NavigationActivity.ReconnectDialogFragment.KEY_BLUETOOTH_DEVICE";
+
+        private ProgressDialog reconnectDialog = null;
+        private BluetoothDevice btDevice= null;
+        private MetaWearBoard currentMwBoard= null;
+
+        public static ReconnectDialogFragment newInstance(BluetoothDevice btDevice) {
+            Bundle args= new Bundle();
+            args.putParcelable(KEY_BLUETOOTH_DEVICE, btDevice);
+
+            ReconnectDialogFragment newFragment= new ReconnectDialogFragment();
+            newFragment.setArguments(args);
+
+            return newFragment;
+        }
+
+        @NonNull
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            btDevice= getArguments().getParcelable(KEY_BLUETOOTH_DEVICE);
+            getActivity().getApplicationContext().bindService(new Intent(getActivity(), MetaWearBleService.class), this, BIND_AUTO_CREATE);
+
+            reconnectDialog = new ProgressDialog(getActivity());
+            reconnectDialog.setTitle(getString(R.string.title_reconnect_attempt));
+            reconnectDialog.setMessage(getString(R.string.message_wait));
+            reconnectDialog.setCancelable(false);
+            reconnectDialog.setCanceledOnTouchOutside(false);
+            reconnectDialog.setIndeterminate(true);
+            reconnectDialog.setButton(DialogInterface.BUTTON_NEGATIVE, getString(R.string.label_cancel), new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialogInterface, int i) {
+                    currentMwBoard.disconnect();
+                    getActivity().finish();
+                }
+            });
+
+            return reconnectDialog;
+        }
+
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            currentMwBoard= ((MetaWearBleService.LocalBinder) service).getMetaWearBoard(btDevice);
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) { }
+    }
+
+    private final String RECONNECT_DIALOG_TAG= "reconnect_dialog_tag";
+    private final Handler connectScheduler= new Handler();
     private final ConnectionStateHandler connectionHandler= new MetaWearBoard.ConnectionStateHandler() {
         @Override
         public void connected() {
-            if (reconnectProgress != null) {
-                reconnectProgress.dismiss();
-            }
-            reconnectProgress= null;
+            ((DialogFragment) getSupportFragmentManager().findFragmentByTag(RECONNECT_DIALOG_TAG)).dismiss();
             ((ModuleFragmentBase) currentFragment).reconnected();
         }
 
@@ -76,27 +154,33 @@ public class NavigationActivity extends AppCompatActivity implements NavigationD
 
         @Override
         public void failure(int status, Throwable error) {
-            mwBoard.connect();
+            Fragment reconnectFragment= getSupportFragmentManager().findFragmentByTag(RECONNECT_DIALOG_TAG);
+            if (reconnectFragment != null) {
+                mwBoard.connect();
+            } else {
+                attemptReconnect();
+            }
         }
     };
 
     private void attemptReconnect() {
-        reconnectProgress= new ProgressDialog(NavigationActivity.this);
-        reconnectProgress.setTitle(getString(R.string.title_reconnect_attempt));
-        reconnectProgress.setMessage(getString(R.string.message_wait));
-        reconnectProgress.setCancelable(false);
-        reconnectProgress.setCanceledOnTouchOutside(false);
-        reconnectProgress.setIndeterminate(true);
-        reconnectProgress.setButton(DialogInterface.BUTTON_NEGATIVE, getString(R.string.label_cancel), new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialogInterface, int i) {
-                mwBoard.disconnect();
-                finish();
-            }
-        });
-        reconnectProgress.show();
+        attemptReconnect(0);
+    }
 
-        mwBoard.connect();
+    private void attemptReconnect(long delay) {
+        ReconnectDialogFragment dialogFragment= ReconnectDialogFragment.newInstance(btDevice);
+        dialogFragment.show(getSupportFragmentManager(), RECONNECT_DIALOG_TAG);
+
+        if (delay != 0) {
+            connectScheduler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    mwBoard.connect();
+                }
+            }, delay);
+        } else {
+            mwBoard.connect();
+        }
     }
 
     /**
@@ -136,7 +220,7 @@ public class NavigationActivity extends AppCompatActivity implements NavigationD
 
         mNavigationDrawerFragment = (NavigationDrawerFragment)
                 getSupportFragmentManager().findFragmentById(R.id.navigation_drawer);
-        mTitle = AppFragments.getFragmentTag(mNavigationDrawerFragment.getCurrentPosition());
+        mTitle = FRAGMENT_TAGS.get(mNavigationDrawerFragment.getCurrentPosition());
 
         // Set up the drawer.
         mNavigationDrawerFragment.setUp(
@@ -156,12 +240,12 @@ public class NavigationActivity extends AppCompatActivity implements NavigationD
             transaction.detach(currentFragment);
         }
 
-        String newFragmentTag= AppFragments.getFragmentTag(position);
+        String newFragmentTag= FRAGMENT_TAGS.get(position);
         currentFragment= fragmentManager.findFragmentByTag(newFragmentTag);
 
         if (currentFragment == null) {
             try {
-                currentFragment= AppFragments.findFragmentClass(newFragmentTag).getConstructor().newInstance();
+                currentFragment= FRAGMENT_CLASSES.get(newFragmentTag).getConstructor().newInstance();
             } catch (Exception e) {
                 throw new RuntimeException("Cannot instantiate fragment", e);
             }
@@ -171,6 +255,11 @@ public class NavigationActivity extends AppCompatActivity implements NavigationD
         mTitle= newFragmentTag;
         restoreActionBar();
         transaction.attach(currentFragment).commit();
+    }
+
+    @Override
+    public List<String> getFragmentTags() {
+        return FRAGMENT_TAGS;
     }
 
     public void restoreActionBar() {
@@ -229,9 +318,10 @@ public class NavigationActivity extends AppCompatActivity implements NavigationD
     }
 
     @Override
-    public void resetConnectionStateHandler() {
+    public void resetConnectionStateHandler(long delay) {
         mwBoard.setConnectionStateHandler(connectionHandler);
-        attemptReconnect();
+        attemptReconnect(delay);
+
     }
 
     @Override

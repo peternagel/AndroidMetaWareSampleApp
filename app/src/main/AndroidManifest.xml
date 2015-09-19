@@ -11,7 +11,6 @@
         android:theme="@style/AppTheme" >
 
         <service android:name="com.mbientlab.metawear.MetaWearBleService" />
-        <service android:name="com.mbientlab.bletoolbox.dfu.MetaWearDfuService" />
 
         <provider
             android:name="android.support.v4.content.FileProvider"
@@ -36,17 +35,6 @@
             android:name=".NavigationActivity"
             android:label="@string/title_activity_navigation" >
         </activity>
-        <activity
-            android:name="com.mbientlab.bletoolbox.dfu.MetaWearDfuActivity"
-            android:icon="@mipmap/ic_dfu_feature"
-            android:label="@string/dfu_feature_title" >
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-            </intent-filter>
-        </activity>
-        <activity
-            android:name="com.mbientlab.bletoolbox.dfu.settings.SettingsActivity"
-            android:label="@string/dfu_settings_title" />
 
     </application>
 
