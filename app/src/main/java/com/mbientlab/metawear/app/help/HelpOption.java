@@ -29,32 +29,16 @@
  * contact MbientLab Inc, at www.mbientlab.com.
  */
 
-apply plugin: 'com.android.application'
+package com.mbientlab.metawear.app.help;
 
-android {
-    compileSdkVersion 23
-    buildToolsVersion "23.0.1"
+/**
+ * Created by etsai on 11/16/2015.
+ */
+public class HelpOption {
+    public final int name, description;
 
-    defaultConfig {
-        applicationId "com.mbientlab.metawear.app"
-        minSdkVersion 18
-        targetSdkVersion 23
-        versionCode 13
-        versionName "3.2.0"
+    public HelpOption(int name, int description) {
+        this.name= name;
+        this.description= description;
     }
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-        }
-    }
-}
-
-dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile 'com.mbientlab:metawear:2.3.0'
-    compile 'com.mbientlab.bletoolbox:scanner:0.2.0'
-    compile 'com.github.PhilJay:MPAndroidChart:v2.1.3'
-    compile 'com.android.support:appcompat-v7:23.1.1'
-    compile 'com.android.support:design:23.1.1'
 }

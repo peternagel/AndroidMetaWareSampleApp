@@ -31,14 +31,17 @@
 
 package com.mbientlab.metawear.app;
 
-import android.app.Activity;
 import android.os.Bundle;
+import android.support.design.widget.TextInputLayout;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ListView;
 import android.widget.Spinner;
 
 import com.github.mikephil.charting.components.YAxis;
@@ -49,30 +52,31 @@ import com.mbientlab.metawear.AsyncOperation.CompletionHandler;
 import com.mbientlab.metawear.Message;
 import com.mbientlab.metawear.RouteManager;
 import com.mbientlab.metawear.UnsupportedModuleException;
-import com.mbientlab.metawear.app.config.SensorConfig;
-import com.mbientlab.metawear.app.config.SensorConfigAdapter;
+import com.mbientlab.metawear.app.help.HelpOption;
+import com.mbientlab.metawear.app.help.HelpOptionAdapter;
 import com.mbientlab.metawear.module.Gpio;
 import com.mbientlab.metawear.module.Gpio.AnalogReadMode;
 import com.mbientlab.metawear.module.Gpio.PullMode;
 import com.mbientlab.metawear.module.Timer;
-
-import java.util.ArrayList;
 
 /**
  * Created by etsai on 8/21/2015.
  */
 public class GpioFragment extends SingleDataSensorFragment {
     private static final String STREAM_KEY= "gpio_stream";
-    private static final byte READ_ADC= 0, READ_ABS_REF= 1, READ_DIGITAL= 2;
-    private static final int SET_OUTPUT= 0, CLEAR_OUTPUT= 1, GPIO_SAMPLE_PERIOD= 500;
+    private static final byte READ_ADC= 0, READ_ABS_REF= 1, READ_DIGITAL= 2, DEFAULT_GPIO_PIN= 0;
+    private static final int GPIO_SAMPLE_PERIOD= 500;
+    private static final int[] CONTROL_RES_IDS= {
+            R.id.sample_control,
+            R.id.gpio_digital_up, R.id.gpio_digital_down, R.id.gpio_digital_none,
+            R.id.gpio_output_set, R.id.gpio_output_clear
+    };
 
-    private byte gpioPin= 0;
+    private byte gpioPin= DEFAULT_GPIO_PIN;
     private int readMode= 0;
     private Gpio gpioModule;
     private Timer timerModule;
     private long startTime= -1;
-
-    private SensorConfigAdapter configAdapter;
 
     private final CompletionHandler<RouteManager> GpioStreamSetup= new CompletionHandler<RouteManager>() {
         @Override
@@ -100,13 +104,11 @@ public class GpioFragment extends SingleDataSensorFragment {
     };
 
     public GpioFragment() {
-        super("Gpio", "adc", R.layout.fragment_gpio, 0, 1);
+        super(R.string.navigation_fragment_gpio, "adc", R.layout.fragment_gpio, 0, 1023);
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        configAdapter= new SensorConfigAdapter(getActivity(), R.id.sensor_config_entry_layout);
-        configAdapter.setNotifyOnChange(true);
         return super.onCreateView(inflater, container, savedInstanceState);
     }
 
@@ -114,95 +116,111 @@ public class GpioFragment extends SingleDataSensorFragment {
     public void onViewCreated(final View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        ((ListView) view.findViewById(R.id.gpio_config)).setAdapter(configAdapter);
-
-        final Activity owner= getActivity();
-        final ArrayList<SensorConfig> configSettings= new ArrayList<>();
-        configSettings.add(new SensorConfig(R.string.config_name_gpio_pin, R.string.config_desc_gpio_pin,
-                gpioPin, R.layout.popup_gpio_pin_config) {
-
-            private EditText gpioPinText;
-
+        Spinner accRangeSelection= (Spinner) view.findViewById(R.id.gpio_read_mode);
+        accRangeSelection.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
-            public void setup(View v) {
-                gpioPinText = (EditText) v.findViewById(R.id.gpio_pin_edit);
-                gpioPinText.setText(String.format("%d", gpioPin));
-            }
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                readMode = position;
+                YAxis leftAxis = chart.getAxisLeft();
 
-            @Override
-            public void changeCommitted() {
-                gpioPin = Byte.valueOf(gpioPinText.getText().toString());
-                value = gpioPin;
-                filenameExtraString= String.format("%d", gpioPin);
-            }
-        });
-        final String[] readModeStringValues= owner.getResources().getStringArray(R.array.values_gpio_read_mode);
-        configSettings.add(new SensorConfig(R.string.config_name_gpio_read_mode,R.string.config_desc_gpio_read_mode,
-                readModeStringValues[readMode], R.layout.popup_config_spinner) {
-
-            private Spinner readModeValues;
-
-            @Override
-            public void setup(View v) {
-                readModeValues = (Spinner) v.findViewById(R.id.config_value_list);
-                final ArrayAdapter<CharSequence> readModeAdapter = ArrayAdapter.createFromResource(getActivity(),
-                        R.array.values_gpio_read_mode, android.R.layout.simple_spinner_item);
-                readModeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                readModeValues.setAdapter(readModeAdapter);
-                readModeValues.setSelection(readMode);
-            }
-
-            @Override
-            public void changeCommitted() {
-                value = readModeStringValues[readMode];
-                readMode = readModeValues.getSelectedItemPosition();
-            }
-        });
-        configSettings.add(new SensorConfig(R.string.config_name_pull_mode, R.string.config_desc_pull_mode,
-                "", R.layout.popup_config_spinner) {
-
-            private Spinner pullModeValues;
-            @Override
-            public void setup(View v) {
-                pullModeValues = (Spinner) v.findViewById(R.id.config_value_list);
-                final ArrayAdapter<CharSequence> pullModeAdapter = ArrayAdapter.createFromResource(getActivity(),
-                        R.array.values_gpio_pull_mode, android.R.layout.simple_spinner_item);
-                pullModeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                pullModeValues.setAdapter(pullModeAdapter);
-            }
-
-            @Override
-            public void changeCommitted() {
-                gpioModule.setPinPullMode(gpioPin, PullMode.values()[pullModeValues.getSelectedItemPosition()]);
-            }
-        });
-        configSettings.add(new SensorConfig(R.string.config_name_output_control, R.string.config_desc_output_control,
-                "", R.layout.popup_config_spinner) {
-
-            private Spinner outputControlValues;
-
-            @Override
-            public void setup(View v) {
-                outputControlValues = (Spinner) v.findViewById(R.id.config_value_list);
-                final ArrayAdapter<CharSequence> outputControlAdapter = ArrayAdapter.createFromResource(getActivity(),
-                        R.array.values_gpio_output_control, android.R.layout.simple_spinner_item);
-                outputControlAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                outputControlValues.setAdapter(outputControlAdapter);
-            }
-
-            @Override
-            public void changeCommitted() {
-                switch (outputControlValues.getSelectedItemPosition()) {
-                    case SET_OUTPUT:
-                        gpioModule.setDigitalOut(gpioPin);
+                switch (readMode) {
+                    case READ_ADC:
+                        max = 1023;
+                        leftAxis.setAxisMaxValue(max);
+                        csvHeaderDataName = "adc";
                         break;
-                    case CLEAR_OUTPUT:
-                        gpioModule.clearDigitalOut(gpioPin);
+                    case READ_ABS_REF:
+                        max = 3000;
+                        leftAxis.setAxisMaxValue(max);
+                        csvHeaderDataName = "abs reference";
+                        break;
+                    case READ_DIGITAL:
+                        max = 1;
+                        leftAxis.setAxisMaxValue(max);
+                        csvHeaderDataName = "digital";
                         break;
                 }
+
+                leftAxis.setAxisMaxValue(max);
+                refreshChart(false);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
             }
         });
-        configAdapter.addAll(configSettings);
+        ArrayAdapter<CharSequence> spinnerAdapter= ArrayAdapter.createFromResource(getContext(), R.array.values_gpio_read_mode, android.R.layout.simple_spinner_item);
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        accRangeSelection.setAdapter(spinnerAdapter);
+        accRangeSelection.setSelection(readMode);
+
+        EditText gpioPinText= (EditText) view.findViewById(R.id.gpio_pin_value);
+        gpioPinText.setText(String.format("%d", gpioPin));
+        gpioPinText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                final TextInputLayout gpioTextWrapper = (TextInputLayout) view.findViewById(R.id.gpio_pin_wrapper);
+
+                try {
+                    gpioPin = Byte.valueOf(s.toString());
+                    gpioTextWrapper.setError(null);
+                    for (int id : CONTROL_RES_IDS) {
+                        view.findViewById(id).setEnabled(true);
+                    }
+                } catch (Exception e) {
+                    gpioTextWrapper.setError(e.getLocalizedMessage());
+                    for (int id : CONTROL_RES_IDS) {
+                        view.findViewById(id).setEnabled(false);
+                    }
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
+
+        view.findViewById(R.id.gpio_digital_up).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                gpioModule.setPinPullMode(gpioPin, PullMode.PULL_UP);
+            }
+        });
+        view.findViewById(R.id.gpio_digital_down).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                gpioModule.setPinPullMode(gpioPin, PullMode.PULL_DOWN);
+            }
+        });
+        view.findViewById(R.id.gpio_digital_none).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                gpioModule.setPinPullMode(gpioPin, PullMode.NO_PULL);
+            }
+        });
+
+        Button setDoBtn= (Button) view.findViewById(R.id.gpio_output_set);
+        setDoBtn.setText(R.string.value_gpio_output_set);
+        setDoBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                gpioModule.setDigitalOut(gpioPin);
+            }
+        });
+
+        Button clearDoBtn= (Button) view.findViewById(R.id.gpio_output_clear);
+        clearDoBtn.setText(R.string.value_gpio_output_clear);
+        clearDoBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                gpioModule.clearDigitalOut(gpioPin);
+            }
+        });
     }
 
     @Override
@@ -212,39 +230,30 @@ public class GpioFragment extends SingleDataSensorFragment {
     }
 
     @Override
+    protected void fillHelpOptionAdapter(HelpOptionAdapter adapter) {
+        adapter.add(new HelpOption(R.string.config_name_gpio_pin, R.string.config_desc_gpio_pin));
+        adapter.add(new HelpOption(R.string.config_name_gpio_read_mode, R.string.config_desc_gpio_read_mode));
+        adapter.add(new HelpOption(R.string.config_name_output_control, R.string.config_desc_output_control));
+        adapter.add(new HelpOption(R.string.config_name_pull_mode, R.string.config_desc_pull_mode));
+    }
+
+    @Override
     protected void setup() {
-        final YAxis leftAxis = chart.getAxisLeft();
         switch(readMode) {
             case READ_ADC:
-                max= 1023;
-                leftAxis.setAxisMaxValue(max);
-                chartDescription= "Analog ADC value vs. Time";
-                csvHeaderDataName= "adc";
-
                 gpioModule.routeData().fromAnalogIn(gpioPin, AnalogReadMode.ADC).stream(STREAM_KEY).commit()
                         .onComplete(GpioStreamSetup);
                 break;
             case READ_ABS_REF:
-                max= 3000;
-                leftAxis.setAxisMaxValue(max);
-                chartDescription= "Analog absolute reference value (mV) vs. Time";
-                csvHeaderDataName= "abs reference";
-
                 gpioModule.routeData().fromAnalogIn(gpioPin, AnalogReadMode.ABS_REFERENCE).stream(STREAM_KEY).commit()
                         .onComplete(GpioStreamSetup);
                 break;
             case READ_DIGITAL:
-                max= 1;
-                leftAxis.setAxisMaxValue(max);
-                chartDescription= "Digital values vs. Time";
-                csvHeaderDataName= "digital";
-
                 gpioModule.routeData().fromDigitalIn(gpioPin).stream(STREAM_KEY).commit()
                         .onComplete(GpioStreamSetup);
                 break;
         }
         filenameExtraString= String.format("%s_pin_%d", csvHeaderDataName, gpioPin);
-        chart.setDescription(chartDescription);
         timerModule.scheduleTask(new Timer.Task() {
             @Override
             public void commands() {

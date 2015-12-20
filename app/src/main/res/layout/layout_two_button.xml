@@ -36,16 +36,16 @@
     style="?android:attr/buttonBarStyle" >
 
     <Button
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
         style="?android:attr/buttonBarButtonStyle"
-        android:id="@+id/left_button" />
+        android:id="@+id/layout_two_button_left" />
 
     <Button
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
         style="?android:attr/buttonBarButtonStyle"
-        android:id="@+id/right_button" />
+        android:id="@+id/layout_two_button_right" />
 </LinearLayout>

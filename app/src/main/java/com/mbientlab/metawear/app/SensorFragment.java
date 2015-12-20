@@ -39,6 +39,8 @@ import android.support.v4.content.FileProvider;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
+import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.Switch;
 
@@ -57,14 +59,13 @@ public abstract class SensorFragment extends ModuleFragmentBase {
     private static final long UPDATE_PERIOD= (long) ((1 / FPS) * 1000L);
 
     protected final ArrayList<String> chartXValues= new ArrayList<>();
-    protected ViewGroup fragContainer;
     protected LineChart chart;
     protected int sampleCount;
 
-    protected String chartDescription;
     protected float min, max;
-
     protected RouteManager streamRouteManager= null;
+
+    private byte globalLayoutListenerCounter= 0;
     private final int layoutId;
 
     private final Runnable updateChartTask= new Runnable() {
@@ -79,8 +80,8 @@ public abstract class SensorFragment extends ModuleFragmentBase {
     };
     private final Handler chartHandler= new Handler();
 
-    protected SensorFragment(String sensor, int layoutId, float min, float max) {
-        super(sensor);
+    protected SensorFragment(int sensorResId, int layoutId, float min, float max) {
+        super(sensorResId);
         this.layoutId= layoutId;
         this.min= min;
         this.max= max;
@@ -96,11 +97,29 @@ public abstract class SensorFragment extends ModuleFragmentBase {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        fragContainer= container;
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         setRetainInstance(true);
-        return inflater.inflate(layoutId, container, false);
+
+        View v= inflater.inflate(layoutId, container, false);
+        final View scrollView = v.findViewById(R.id.scrollView);
+        if (scrollView != null) {
+            globalLayoutListenerCounter= 1;
+            scrollView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+                @Override
+                public void onGlobalLayout() {
+                    LineChart.LayoutParams params = chart.getLayoutParams();
+                    params.height = scrollView.getHeight();
+                    chart.setLayoutParams(params);
+
+                    globalLayoutListenerCounter--;
+                    if (globalLayoutListenerCounter < 0) {
+                        scrollView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                    }
+                }
+            });
+        }
+
+        return v;
     }
 
     @Override
@@ -113,15 +132,15 @@ public abstract class SensorFragment extends ModuleFragmentBase {
         resetData(false);
         chart.invalidate();
 
-        view.findViewById(R.id.data_clear).setOnClickListener(new View.OnClickListener() {
+        Button clearButton= (Button) view.findViewById(R.id.layout_two_button_left);
+        clearButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                chart.resetTracking();
-                chart.clear();
-                resetData(true);
-                chart.invalidate();
+                refreshChart(true);
             }
         });
+        clearButton.setText(R.string.label_clear);
+
         ((Switch) view.findViewById(R.id.sample_control)).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
@@ -134,14 +153,16 @@ public abstract class SensorFragment extends ModuleFragmentBase {
                     clean();
                     if (streamRouteManager != null) {
                         streamRouteManager.remove();
-                        streamRouteManager= null;
+                        streamRouteManager = null;
                     }
                     chartHandler.removeCallbacks(updateChartTask);
                 }
             }
         });
 
-        view.findViewById(R.id.data_save).setOnClickListener(new View.OnClickListener() {
+        Button saveButton= (Button) view.findViewById(R.id.layout_two_button_right);
+        saveButton.setText(R.string.label_save);
+        saveButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 String filename = saveData();
@@ -160,6 +181,14 @@ public abstract class SensorFragment extends ModuleFragmentBase {
         });
     }
 
+    protected void refreshChart(boolean clearData) {
+        chart.resetTracking();
+        chart.clear();
+        resetData(clearData);
+        chart.invalidate();
+        chart.setDescription(null);
+    }
+
     protected void initializeChart() {
         ///< configure axis settings
         YAxis leftAxis = chart.getAxisLeft();
@@ -167,8 +196,6 @@ public abstract class SensorFragment extends ModuleFragmentBase {
         leftAxis.setAxisMaxValue(max);
         leftAxis.setAxisMinValue(min);
         chart.getAxisRight().setEnabled(false);
-
-        chart.setDescription(chartDescription);
     }
 
     protected abstract void setup();

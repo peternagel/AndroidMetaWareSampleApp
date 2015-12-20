@@ -75,12 +75,11 @@ public abstract class ThreeAxisChartFragment extends SensorFragment {
         }
     };
 
-    protected ThreeAxisChartFragment(String dataType, String chartDescription, String sensor, String streamKey, float min, float max, float sampleFreq) {
-        super(sensor, R.layout.fragment_sensor, min, max);
+    protected ThreeAxisChartFragment(String dataType, int layoutId, int sensorResId, String streamKey, float min, float max, float sampleFreq) {
+        super(sensorResId, layoutId, min, max);
         this.dataType= dataType;
         this.streamKey= streamKey;
         this.samplePeriod= 1 / sampleFreq;
-        this.chartDescription= chartDescription;
     }
 
     @Override
@@ -96,7 +95,7 @@ public abstract class ThreeAxisChartFragment extends SensorFragment {
     @Override
     protected String saveData() {
         final String CSV_HEADER = String.format("time,x-%s,y-%s,z-%s%n", dataType, dataType, dataType);
-        String filename = String.format("%s_%tY%<tm%<td-%<tH%<tM%<tS%<tL.csv", sensor, Calendar.getInstance());
+        String filename = String.format("%s_%tY%<tm%<td-%<tH%<tM%<tS%<tL.csv", getContext().getString(sensorResId), Calendar.getInstance());
 
         try {
             FileOutputStream fos = getActivity().openFileOutput(filename, Context.MODE_PRIVATE);

@@ -32,37 +32,44 @@
 package com.mbientlab.metawear.app;
 
 import android.os.Bundle;
+import android.support.design.widget.TextInputLayout;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ListView;
 
-import com.mbientlab.metawear.AsyncOperation;
+import com.mbientlab.metawear.AsyncOperation.CompletionHandler;
 import com.mbientlab.metawear.UnsupportedModuleException;
-import com.mbientlab.metawear.app.config.SensorConfigAdapter;
-import com.mbientlab.metawear.app.config.SensorConfig;
+import com.mbientlab.metawear.app.help.HelpOption;
+import com.mbientlab.metawear.app.help.HelpOptionAdapter;
 import com.mbientlab.metawear.module.IBeacon;
 
-import java.util.ArrayList;
 import java.util.UUID;
 
 /**
  * Created by etsai on 8/22/2015.
  */
 public class IBeaconFragment extends ModuleFragmentBase {
-    final ArrayList<SensorConfig> configSettings= new ArrayList<>();
+    private final static int[] CONFIG_WRAPPERS;
 
+    static {
+        CONFIG_WRAPPERS = new int[] {
+                R.id.ibeacon_uuid_wrapper, R.id.ibeacon_major_wrapper, R.id.ibeacon_minor_wrapper, R.id.ibeacon_rx_power_wrapper,
+                R.id.ibeacon_tx_power_wrapper, R.id.ibeacon_period_wrapper
+        };
+    }
+
+    private CompletionHandler<IBeacon.Configuration> readConfigHandler;
     private boolean isReady;
     private IBeacon ibeaconModule;
-    private SensorConfigAdapter configAdapter;
 
     private UUID uuid;
     private short major, minor, period;
     private byte rxPower, txPower;
 
     public IBeaconFragment() {
-        super("IBeacon");
+        super(R.string.navigation_fragment_ibeacon);
     }
 
     @Override
@@ -70,14 +77,21 @@ public class IBeaconFragment extends ModuleFragmentBase {
         isReady= true;
         ibeaconModule= mwBoard.getModule(IBeacon.class);
 
-        addConfigOptions();
+        ibeaconModule.readConfiguration().onComplete(readConfigHandler);
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        configAdapter= new SensorConfigAdapter(getActivity(), R.id.sensor_config_entry_layout);
-        configAdapter.setNotifyOnChange(true);
+    protected void fillHelpOptionAdapter(HelpOptionAdapter adapter) {
+        adapter.add(new HelpOption(R.string.config_name_ibeacon_uuid, R.string.config_desc_ibeacon_uuid));
+        adapter.add(new HelpOption(R.string.config_name_ibeacon_major, R.string.config_desc_ibeacon_major));
+        adapter.add(new HelpOption(R.string.config_name_ibeacon_minor, R.string.config_desc_ibeacon_minor));
+        adapter.add(new HelpOption(R.string.config_name_ibeacon_rx, R.string.config_desc_ibeacon_rx));
+        adapter.add(new HelpOption(R.string.config_name_ibeacon_tx, R.string.config_desc_ibeacon_tx));
+        adapter.add(new HelpOption(R.string.config_name_ibeacon_period, R.string.config_desc_ibeacon_period));
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         setRetainInstance(true);
         return inflater.inflate(R.layout.fragment_ibeacon, container, false);
     }
@@ -86,149 +100,107 @@ public class IBeaconFragment extends ModuleFragmentBase {
     public void onViewCreated(final View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        ((ListView) view.findViewById(R.id.ibeacon_settings)).setAdapter(configAdapter);
+        View iBeaconControl= view.findViewById(R.id.ibeacon_control);
 
-        view.findViewById(R.id.ibeacon_enable).setOnClickListener(new View.OnClickListener() {
+        Button enableBtn= (Button) iBeaconControl.findViewById(R.id.layout_two_button_left);
+        enableBtn.setText(R.string.label_enable);
+        iBeaconControl.findViewById(R.id.layout_two_button_left).setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) {
-                ibeaconModule.configure()
-                        .setUUID(uuid)
-                        .setMajor(major)
-                        .setMinor(minor)
-                        .setAdPeriod(period)
-                        .setRxPower(rxPower)
-                        .setTxPower(txPower)
-                        .commit();
-                ibeaconModule.enable();
+            public void onClick(View innerView) {
+                TextInputLayout[] inputLayouts = new TextInputLayout[CONFIG_WRAPPERS.length];
+                for (int i = 0; i < CONFIG_WRAPPERS.length; i++) {
+                    inputLayouts[i] = (TextInputLayout) view.findViewById(CONFIG_WRAPPERS[i]);
+                }
+
+                boolean valid = true;
+
+                try {
+                    uuid = UUID.fromString(((EditText) view.findViewById(R.id.ibeacon_uuid_value)).getText().toString());
+                    inputLayouts[0].setError(null);
+                } catch (Exception e) {
+                    valid = false;
+                    inputLayouts[0].setError(e.getLocalizedMessage());
+                }
+
+                try {
+                    major = Short.valueOf(((EditText) view.findViewById(R.id.ibeacon_major_value)).getText().toString());
+                    inputLayouts[1].setError(null);
+                } catch (Exception e) {
+                    valid = false;
+                    inputLayouts[1].setError(e.getLocalizedMessage());
+                }
+
+                try {
+                    minor = Short.valueOf(((EditText) view.findViewById(R.id.ibeacon_minor_value)).getText().toString());
+                    inputLayouts[2].setError(null);
+                } catch (Exception e) {
+                    valid = false;
+                    inputLayouts[2].setError(e.getLocalizedMessage());
+                }
+
+                try {
+                    rxPower = Byte.valueOf(((EditText) view.findViewById(R.id.ibeacon_rx_power_value)).getText().toString());
+                    inputLayouts[3].setError(null);
+                } catch (Exception e) {
+                    valid = false;
+                    inputLayouts[3].setError(e.getLocalizedMessage());
+                }
+
+                try {
+                    txPower = Byte.valueOf(((EditText) view.findViewById(R.id.ibeacon_tx_power_value)).getText().toString());
+                    inputLayouts[4].setError(null);
+                } catch (Exception e) {
+                    valid = false;
+                    inputLayouts[4].setError(e.getLocalizedMessage());
+                }
+
+                try {
+                    period = Short.valueOf(((EditText) view.findViewById(R.id.ibeacon_period_value)).getText().toString());
+                    inputLayouts[5].setError(null);
+                } catch (Exception e) {
+                    valid = false;
+                    inputLayouts[5].setError(e.getLocalizedMessage());
+                }
+
+                if (valid) {
+                    ibeaconModule.configure()
+                            .setUUID(uuid)
+                            .setMajor(major)
+                            .setMinor(minor)
+                            .setAdPeriod(period)
+                            .setRxPower(rxPower)
+                            .setTxPower(txPower)
+                            .commit();
+                    ibeaconModule.enable();
+                }
             }
         });
-        view.findViewById(R.id.ibeacon_disable).setOnClickListener(new View.OnClickListener() {
+
+        Button disableBtn= (Button) iBeaconControl.findViewById(R.id.layout_two_button_right);
+        disableBtn.setText(R.string.label_disable);
+        iBeaconControl.findViewById(R.id.layout_two_button_right).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 ibeaconModule.disable();
             }
         });
 
-        if (isReady) {
-            addConfigOptions();
-        }
-    }
-
-    private void addConfigOptions() {
-        ibeaconModule.readConfiguration().onComplete(new AsyncOperation.CompletionHandler<IBeacon.Configuration>() {
+        readConfigHandler = new CompletionHandler<IBeacon.Configuration>() {
             @Override
             public void success(IBeacon.Configuration result) {
-                uuid = result.adUuid();
-                major = result.major();
-                minor = result.minor();
-                rxPower = result.rxPower();
-                txPower = result.txPower();
-                period = result.adPeriod();
-
-                configSettings.clear();
-                configSettings.add(new SensorConfig(R.string.config_name_ibeacon_uuid, R.string.config_desc_ibeacon_uuid,
-                        uuid, R.layout.popup_config_string) {
-
-                    private EditText uuidText;
-
-                    @Override
-                    public void setup(View v) {
-                        uuidText = (EditText) v.findViewById(R.id.config_value);
-                        uuidText.setText(uuid.toString());
-                    }
-
-                    @Override
-                    public void changeCommitted() {
-                        uuid = UUID.fromString(uuidText.getText().toString());
-                        value = uuid;
-                    }
-                });
-                configSettings.add(new SensorConfig(R.string.config_name_ibeacon_major, R.string.config_desc_ibeacon_major,
-                        major, R.layout.popup_gpio_pin_config) {
-
-                    private EditText majorText;
-
-                    @Override
-                    public void setup(View v) {
-                        majorText = (EditText) v.findViewById(R.id.gpio_pin_edit);
-                        majorText.setText(String.format("%d", major));
-                    }
-
-                    @Override
-                    public void changeCommitted() {
-                        major = Short.valueOf(majorText.getText().toString());
-                        value = major;
-                    }
-                });
-                configSettings.add(new SensorConfig(R.string.config_name_ibeacon_minor, R.string.config_desc_ibeacon_minor,
-                        minor, R.layout.popup_gpio_pin_config) {
-
-                    private EditText minorText;
-
-                    @Override
-                    public void setup(View v) {
-                        minorText = (EditText) v.findViewById(R.id.gpio_pin_edit);
-                        minorText.setText(String.format("%d", minor));
-                    }
-
-                    @Override
-                    public void changeCommitted() {
-                        minor = Short.valueOf(minorText.getText().toString());
-                        value = minor;
-                    }
-                });
-                configSettings.add(new SensorConfig(R.string.config_name_ibeacon_rx, R.string.config_desc_ibeacon_rx,
-                        rxPower, R.layout.popup_gpio_pin_config) {
-                    private EditText rxPowerText;
-
-                    @Override
-                    public void setup(View v) {
-                        rxPowerText = (EditText) v.findViewById(R.id.gpio_pin_edit);
-                        rxPowerText.setText(String.format("%d", rxPower));
-                    }
-
-                    @Override
-                    public void changeCommitted() {
-                        rxPower = Byte.valueOf(rxPowerText.getText().toString());
-                        value = rxPower;
-                    }
-                });
-                configSettings.add(new SensorConfig(R.string.config_name_ibeacon_tx, R.string.config_desc_ibeacon_tx,
-                        txPower, R.layout.popup_gpio_pin_config) {
-                    private EditText txPowerText;
-
-                    @Override
-                    public void setup(View v) {
-                        txPowerText = (EditText) v.findViewById(R.id.gpio_pin_edit);
-                        txPowerText.setText(String.format("%d", txPower));
-                    }
-
-                    @Override
-                    public void changeCommitted() {
-                        txPower = Byte.valueOf(txPowerText.getText().toString());
-                        value = txPower;
-                    }
-                });
-                configSettings.add(new SensorConfig(R.string.config_name_ibeacon_period, R.string.config_desc_ibeacon_period,
-                        period, R.layout.popup_gpio_pin_config) {
-
-                    private EditText periodText;
-
-                    @Override
-                    public void setup(View v) {
-                        periodText = (EditText) v.findViewById(R.id.gpio_pin_edit);
-                        periodText.setText(String.format("%d", period));
-                    }
-
-                    @Override
-                    public void changeCommitted() {
-                        period = Short.valueOf(periodText.getText().toString());
-                        value = period;
-                    }
-                });
-
-                configAdapter.addAll(configSettings);
+                final int[] configEditText= new int[] {
+                        R.id.ibeacon_uuid_value, R.id.ibeacon_major_value, R.id.ibeacon_minor_value, R.id.ibeacon_rx_power_value,
+                        R.id.ibeacon_tx_power_value, R.id.ibeacon_period_value
+                };
+                Object[] values= new Object[] {result.adUuid(), result.major(), result.minor(), result.rxPower(), result.txPower(), result.adPeriod()};
+                for (int i= 0; i < values.length; i++) {
+                    ((EditText) view.findViewById(configEditText[i])).setText(values[i].toString());
+                }
             }
-        });
+        };
+
+        if (isReady) {
+            ibeaconModule.readConfiguration().onComplete(readConfigHandler);
+        }
     }
 }

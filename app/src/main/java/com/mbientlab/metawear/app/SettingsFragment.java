@@ -32,42 +32,47 @@
 package com.mbientlab.metawear.app;
 
 import android.os.Bundle;
+import android.support.design.widget.TextInputLayout;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ListView;
-import android.widget.Spinner;
 
-import com.mbientlab.metawear.AsyncOperation;
+import com.mbientlab.metawear.AsyncOperation.CompletionHandler;
 import com.mbientlab.metawear.UnsupportedModuleException;
-import com.mbientlab.metawear.app.config.SensorConfig;
-import com.mbientlab.metawear.app.config.SensorConfigAdapter;
+import com.mbientlab.metawear.app.help.HelpOption;
+import com.mbientlab.metawear.app.help.HelpOptionAdapter;
 import com.mbientlab.metawear.module.Debug;
 import com.mbientlab.metawear.module.Macro;
 import com.mbientlab.metawear.module.Settings;
-
-import java.util.ArrayList;
 
 /**
  * Created by etsai on 8/22/2015.
  */
 public class SettingsFragment extends ModuleFragmentBase {
-    final ArrayList<SensorConfig> configSettings= new ArrayList<>();
-    private SensorConfigAdapter configAdapter;
+    private final static int[] CONFIG_WRAPPERS;
+
+    static {
+        CONFIG_WRAPPERS = new int[] {
+                R.id.settings_ad_name_wrapper, R.id.settings_ad_interval_wrapper, R.id.settings_ad_timeout_wrapper, R.id.settings_tx_power_wrapper
+        };
+    }
+
     private Settings settingsModule;
     private Macro macroModule;
     private Debug debugModule;
     private boolean isReady= false;
+    private CompletionHandler<Settings.AdvertisementConfig> readConfigHandler;
+
 
     private String deviceName;
+    private int adInterval;
     private short timeout;
     private byte txPower;
-    private int txPowerIndex= 0, adInterval;
 
     public SettingsFragment() {
-        super("Settings");
+        super(R.string.navigation_fragment_settings);
     }
 
     @Override
@@ -78,14 +83,20 @@ public class SettingsFragment extends ModuleFragmentBase {
         settingsModule= mwBoard.getModule(Settings.class);
         macroModule= mwBoard.getModule(Macro.class);
 
-        addConfigOptions();
+        settingsModule.readAdConfig().onComplete(readConfigHandler);
+    }
+
+    @Override
+    protected void fillHelpOptionAdapter(HelpOptionAdapter adapter) {
+        adapter.add(new HelpOption(R.string.config_name_ad_device_name, R.string.config_desc_ad_device_name));
+        adapter.add(new HelpOption(R.string.config_name_ad_timeout, R.string.config_desc_ad_timeout));
+        adapter.add(new HelpOption(R.string.config_name_ad_tx, R.string.config_desc_ad_tx));
+        adapter.add(new HelpOption(R.string.config_name_ad_interval, R.string.config_desc_ad_interval));
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        configAdapter= new SensorConfigAdapter(getActivity(), R.id.sensor_config_entry_layout);
-        configAdapter.setNotifyOnChange(true);
         setRetainInstance(true);
         return inflater.inflate(R.layout.fragment_settings, container, false);
     }
@@ -94,24 +105,63 @@ public class SettingsFragment extends ModuleFragmentBase {
     public void onViewCreated(final View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        ((ListView) view.findViewById(R.id.ad_setting_parameters)).setAdapter(configAdapter);
+        View settingsControl= view.findViewById(R.id.settings_control);
 
-        view.findViewById(R.id.settings_save).setOnClickListener(new View.OnClickListener() {
+        Button enableBtn= (Button) settingsControl.findViewById(R.id.layout_two_button_left);
+        enableBtn.setText(R.string.label_save);
+        enableBtn.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) {
-                macroModule.record(new Macro.CodeBlock() {
-                    @Override
-                    public void commands() {
-                        settingsModule.configure()
-                                .setDeviceName(deviceName)
-                                .setAdInterval((short) (adInterval & 0xffff), (byte) (timeout & 0xff))
-                                .setTxPower(txPower)
-                                .commit();
-                    }
-                });
+            public void onClick(View innerView) {
+                TextInputLayout[] inputLayouts = new TextInputLayout[CONFIG_WRAPPERS.length];
+                for (int i = 0; i < CONFIG_WRAPPERS.length; i++) {
+                    inputLayouts[i] = (TextInputLayout) view.findViewById(CONFIG_WRAPPERS[i]);
+                }
+
+                boolean valid = true;
+                deviceName = ((EditText) view.findViewById(R.id.settings_ad_name_value)).getText().toString();
+
+                try {
+                    adInterval = Integer.valueOf(((EditText) view.findViewById(R.id.settings_ad_interval_value)).getText().toString());
+                    inputLayouts[1].setError(null);
+                } catch (Exception e) {
+                    valid = false;
+                    inputLayouts[1].setError(e.getLocalizedMessage());
+                }
+
+                try {
+                    timeout = Short.valueOf(((EditText) view.findViewById(R.id.settings_ad_timeout_value)).getText().toString());
+                    inputLayouts[2].setError(null);
+                } catch (Exception e) {
+                    valid = false;
+                    inputLayouts[2].setError(e.getLocalizedMessage());
+                }
+
+                try {
+                    txPower = Byte.valueOf(((EditText) view.findViewById(R.id.settings_tx_power_value)).getText().toString());
+                    inputLayouts[3].setError(null);
+                } catch (Exception e) {
+                    valid = false;
+                    inputLayouts[3].setError(e.getLocalizedMessage());
+                }
+
+                if (valid) {
+                    macroModule.record(new Macro.CodeBlock() {
+                        @Override
+                        public void commands() {
+                            settingsModule.configure()
+                                    .setDeviceName(deviceName)
+                                    .setAdInterval((short) (adInterval & 0xffff), (byte) (timeout & 0xff))
+                                    .setTxPower(txPower)
+                                    .commit();
+                        }
+                    });
+                }
             }
         });
-        view.findViewById(R.id.settings_clear).setOnClickListener(new View.OnClickListener() {
+
+        Button disableBtn= (Button) settingsControl.findViewById(R.id.layout_two_button_right);
+        disableBtn.setText(R.string.label_clear);
+        disableBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 macroModule.eraseMacros();
@@ -119,98 +169,22 @@ public class SettingsFragment extends ModuleFragmentBase {
             }
         });
 
-        if (isReady) {
-            addConfigOptions();
-        }
-    }
-
-    private void addConfigOptions() {
-        settingsModule.readAdConfig().onComplete(new AsyncOperation.CompletionHandler<Settings.AdvertisementConfig>() {
+        readConfigHandler= new CompletionHandler<Settings.AdvertisementConfig>() {
             @Override
             public void success(Settings.AdvertisementConfig result) {
-                deviceName= result.deviceName();
-                adInterval= result.interval();
-                timeout= result.timeout();
-                txPower= result.txPower();
+                final int[] configEditText= new int[] {
+                        R.id.settings_ad_name_value, R.id.settings_ad_interval_value, R.id.settings_ad_timeout_value, R.id.settings_tx_power_value
+                };
+                Object[] values= new Object[] {result.deviceName(), result.interval(), result.timeout(), result.txPower()};
 
-                configSettings.clear();
-                configSettings.add(new SensorConfig(R.string.config_name_ad_device_name, R.string.config_desc_ad_device_name,
-                        deviceName, R.layout.popup_config_string) {
-
-                    private EditText deviceNameText;
-
-                    @Override
-                    public void setup(View v) {
-                        deviceNameText = (EditText) v.findViewById(R.id.config_value);
-                        deviceNameText.setText(deviceName);
-                    }
-
-                    @Override
-                    public void changeCommitted() {
-                        deviceName = deviceNameText.getText().toString();
-                        value= deviceName;
-                    }
-                });
-                configSettings.add(new SensorConfig(R.string.config_name_ad_interval, R.string.config_desc_ad_interval,
-                        adInterval, R.layout.popup_gpio_pin_config) {
-
-                    private EditText adIntervalText;
-
-                    @Override
-                    public void setup(View v) {
-                        adIntervalText = (EditText) v.findViewById(R.id.gpio_pin_edit);
-                        adIntervalText.setText(String.format("%d", adInterval));
-                    }
-
-                    @Override
-                    public void changeCommitted() {
-                        adInterval = Short.valueOf(adIntervalText.getText().toString());
-                        value= adIntervalText;
-                    }
-                });
-                configSettings.add(new SensorConfig(R.string.config_name_ad_timeout, R.string.config_desc_ad_timeout,
-                        timeout, R.layout.popup_gpio_pin_config) {
-
-                    private EditText adTimeoutText;
-
-                    @Override
-                    public void setup(View v) {
-                        adTimeoutText = (EditText) v.findViewById(R.id.gpio_pin_edit);
-                        adTimeoutText.setText(String.format("%d", timeout));
-                    }
-
-                    @Override
-                    public void changeCommitted() {
-                        timeout = Byte.valueOf(adTimeoutText.getText().toString());
-                        value= timeout;
-                    }
-                });
-                final String[] txPowerStringValues= getActivity().getResources().getStringArray(R.array.values_ad_settings_tx_power);
-                configSettings.add(new SensorConfig(R.string.config_name_ad_tx, R.string.config_desc_ad_tx,
-                        txPower, R.layout.popup_config_spinner) {
-
-                    private Spinner txPowerValues;
-
-                    @Override
-                    public void setup(View v) {
-                        txPowerValues = (Spinner) v.findViewById(R.id.config_value_list);
-                        final ArrayAdapter<CharSequence> readModeAdapter = ArrayAdapter.createFromResource(getActivity(),
-                                R.array.values_ad_settings_tx_power, android.R.layout.simple_spinner_item);
-                        readModeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                        txPowerValues.setAdapter(readModeAdapter);
-                        txPowerValues.setSelection(txPowerIndex);
-                    }
-
-                    @Override
-                    public void changeCommitted() {
-                        txPowerIndex = txPowerValues.getSelectedItemPosition();
-                        txPower = Byte.valueOf(txPowerStringValues[txPowerIndex]);
-                        value= txPower;
-                    }
-                });
-
-                configAdapter.addAll(configSettings);
+                for (int i= 0; i < values.length; i++) {
+                    ((EditText) view.findViewById(configEditText[i])).setText(values[i].toString());
+                }
             }
-        });
+        };
+
+        if (isReady) {
+            settingsModule.readAdConfig().onComplete(readConfigHandler);
+        }
     }
 }

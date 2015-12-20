@@ -44,10 +44,12 @@ import android.support.v4.app.Fragment;
 import android.support.v7.app.AlertDialog;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ListView;
 
 import com.mbientlab.metawear.MetaWearBleService;
 import com.mbientlab.metawear.MetaWearBoard;
 import com.mbientlab.metawear.UnsupportedModuleException;
+import com.mbientlab.metawear.app.help.HelpOptionAdapter;
 
 import java.util.Locale;
 
@@ -63,25 +65,48 @@ public abstract class ModuleFragmentBase extends Fragment implements ServiceConn
     private boolean boardReady= false;
     protected MetaWearBoard mwBoard;
     protected FragmentBus fragBus;
-    protected String sensor;
+    protected int sensorResId;
 
     protected abstract void boardReady() throws UnsupportedModuleException;
+    protected abstract void fillHelpOptionAdapter(HelpOptionAdapter adapter);
 
-    public ModuleFragmentBase(String sensor) {
-        this.sensor= sensor;
+    protected void showHelpDialog() {
+        HelpOptionAdapter adapter= new HelpOptionAdapter(getContext(), R.id.config_help_list);
+        fillHelpOptionAdapter(adapter);
+
+        if (adapter.getCount() != 0) {
+            AlertDialog dialog = new AlertDialog.Builder(getActivity())
+                    .setPositiveButton(R.string.label_ok, null)
+                    .setView(R.layout.layout_config_help)
+                    .create();
+            dialog.show();
+            ((ListView) dialog.findViewById(R.id.config_help_list)).setAdapter(adapter);
+
+            adapter.notifyDataSetChanged();
+        } else {
+            new AlertDialog.Builder(getActivity())
+                    .setPositiveButton(R.string.label_ok, null)
+                    .setMessage(R.string.message_no_config)
+                    .create().show();
+        }
+    }
+
+    public ModuleFragmentBase(int sensorResId) {
+        this.sensorResId= sensorResId;
     }
 
     @Override
-    public void onAttach(Activity activity) {
-        super.onAttach(activity);
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
 
-        if (!(activity instanceof FragmentBus)) {
-            throw new ClassCastException(String.format(Locale.US, "%s %s", activity.toString(),
-                    activity.getString(R.string.error_fragment_bus)));
+        Activity owner= getActivity();
+        if (!(owner instanceof FragmentBus)) {
+            throw new ClassCastException(String.format(Locale.US, "%s %s", owner.toString(),
+                    owner.getString(R.string.error_fragment_bus)));
         }
 
-        fragBus= (FragmentBus) activity;
-        activity.getApplicationContext().bindService(new Intent(activity, MetaWearBleService.class), this, Context.BIND_AUTO_CREATE);
+        fragBus= (FragmentBus) owner;
+        owner.getApplicationContext().bindService(new Intent(owner, MetaWearBleService.class), this, Context.BIND_AUTO_CREATE);
     }
 
     @Override
@@ -125,7 +150,7 @@ public abstract class ModuleFragmentBase extends Fragment implements ServiceConn
 
     private void unsupportedModule() {
         new AlertDialog.Builder(getActivity()).setTitle(R.string.title_error)
-                .setMessage(String.format("%s %s", sensor, getActivity().getString(R.string.error_unsupported_module)))
+                .setMessage(String.format("%s %s", getContext().getString(sensorResId), getActivity().getString(R.string.error_unsupported_module)))
                 .setCancelable(false)
                 .setPositiveButton(R.string.label_ok, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {

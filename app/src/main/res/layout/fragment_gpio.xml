@@ -32,23 +32,122 @@
 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical" android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin" >
 
-    <ListView
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:id="@+id/gpio_config" />
+    <include layout="@layout/component_sampling_control" />
+    <include layout="@layout/layout_two_button" />
 
-    <include layout="@layout/component_sampling_control"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
-    <include layout="@layout/component_data_control"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
-    <include layout="@layout/component_line_chart"
-        android:layout_weight="1"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="fill_parent"
+        android:id="@+id/scrollView" >
 
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <android.support.design.widget.TextInputLayout
+                xmlns:app="http://schemas.android.com/apk/res-auto"
+                app:hintTextAppearance="@style/EditTextLabel"
+                android:hint="@string/config_name_gpio_pin"
+                android:id="@+id/gpio_pin_wrapper"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <EditText android:id="@+id/gpio_pin_value"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number" />
+
+            </android.support.design.widget.TextInputLayout>
+
+            <TextView
+                android:text="@string/config_name_gpio_read_mode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                android:id="@+id/gpio_read_mode_title" />
+
+            <Spinner
+                android:id="@+id/gpio_read_mode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                android:text="@string/config_name_output_control"
+                android:id="@+id/textView3" />
+
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                style="?android:attr/buttonBarStyle" >
+
+                <Button
+                    android:layout_weight="1"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:text="@string/value_gpio_pull_up"
+                    style="?android:attr/buttonBarButtonStyle"
+                    android:id="@+id/gpio_output_set" />
+
+                <Button
+                    android:layout_weight="1"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:text="@string/value_gpio_pull_down"
+                    style="?android:attr/buttonBarButtonStyle"
+                    android:id="@+id/gpio_output_clear" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                android:text="@string/config_name_pull_mode"
+                android:id="@+id/textView6" />
+
+            <LinearLayout
+                android:id="@+id/linearLayout2"
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                style="?android:attr/buttonBarStyle" >
+
+                <Button
+                    android:layout_weight="1"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:text="@string/value_gpio_pull_up"
+                    style="?android:attr/buttonBarButtonStyle"
+                    android:id="@+id/gpio_digital_up" />
+
+                <Button
+                    android:layout_weight="1"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:text="@string/value_gpio_pull_down"
+                    style="?android:attr/buttonBarButtonStyle"
+                    android:id="@+id/gpio_digital_down" />
+
+                <Button
+                    android:layout_weight="1"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:text="@string/value_gpio_pull_none"
+                    style="?android:attr/buttonBarButtonStyle"
+                    android:id="@+id/gpio_digital_none" />
+            </LinearLayout>
+
+            <include layout="@layout/component_line_chart" />
+
+        </LinearLayout>
+    </ScrollView>
 </LinearLayout>

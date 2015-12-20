@@ -42,6 +42,7 @@ import com.mbientlab.metawear.AsyncOperation;
 import com.mbientlab.metawear.Message;
 import com.mbientlab.metawear.RouteManager;
 import com.mbientlab.metawear.UnsupportedModuleException;
+import com.mbientlab.metawear.app.help.HelpOptionAdapter;
 import com.mbientlab.metawear.module.Bmp280Barometer;
 import com.mbientlab.metawear.module.Bmp280Barometer.*;
 
@@ -83,16 +84,19 @@ public class BarometerFragment extends SensorFragment {
         }
     }
     public BarometerFragment() {
-        super("Barometer", R.layout.fragment_sensor, 80000, 110000);
+        super(R.string.navigation_fragment_barometer, R.layout.fragment_sensor, 80000, 110000);
         altitudeMin= -300;
         altitudeMax= 1500;
-
-        chartDescription= "Pressure (pa) and altitude (m) vs. Time";
     }
 
     @Override
     protected void boardReady() throws UnsupportedModuleException {
         barometerModule= mwBoard.getModule(Bmp280Barometer.class);
+    }
+
+    @Override
+    protected void fillHelpOptionAdapter(HelpOptionAdapter adapter) {
+
     }
 
     @Override
@@ -134,8 +138,6 @@ public class BarometerFragment extends SensorFragment {
         rightAxis.setStartAtZero(false);
         rightAxis.setAxisMaxValue(altitudeMax);
         rightAxis.setAxisMinValue(altitudeMin);
-
-        chart.setDescription(chartDescription);
     }
 
     @Override
@@ -151,7 +153,7 @@ public class BarometerFragment extends SensorFragment {
     @Override
     protected String saveData() {
         final String CSV_HEADER = String.format("time,pressure,altitude%n");
-        String filename = String.format("%s_%tY%<tm%<td-%<tH%<tM%<tS%<tL.csv", sensor, Calendar.getInstance());
+        String filename = String.format("%s_%tY%<tm%<td-%<tH%<tM%<tS%<tL.csv", getContext().getString(sensorResId), Calendar.getInstance());
 
         try {
             FileOutputStream fos = getActivity().openFileOutput(filename, Context.MODE_PRIVATE);

@@ -35,7 +35,6 @@
     android:layout_height="match_parent">
 
     <include layout="@layout/component_sampling_control" />
-
-    <include layout="@layout/component_data_control" />
+    <include layout="@layout/layout_two_button" />
     <include layout="@layout/component_line_chart" />
 </LinearLayout>

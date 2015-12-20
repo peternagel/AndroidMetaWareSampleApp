@@ -32,21 +32,20 @@
 package com.mbientlab.metawear.app;
 
 import android.os.Bundle;
+import android.support.design.widget.TextInputLayout;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
+import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ListView;
 import android.widget.Spinner;
 
 import com.mbientlab.metawear.UnsupportedModuleException;
-import com.mbientlab.metawear.app.config.NeoPixelConfig;
-import com.mbientlab.metawear.app.config.NeoPixelConfigAdapter;
+import com.mbientlab.metawear.app.help.HelpOption;
+import com.mbientlab.metawear.app.help.HelpOptionAdapter;
 import com.mbientlab.metawear.module.NeoPixel;
 import com.mbientlab.metawear.module.NeoPixel.*;
-
-import java.util.ArrayList;
 
 /**
  * Created by etsai on 8/23/2015.
@@ -57,7 +56,6 @@ public class NeoPixelFragment extends ModuleFragmentBase {
     }
 
     private NeoPixel neoPixelModule;
-    private NeoPixelConfigAdapter configAdapter;
 
     private PatternProgrammer[] programmer= new PatternProgrammer[] {
             new PatternProgrammer() {
@@ -85,22 +83,16 @@ public class NeoPixelFragment extends ModuleFragmentBase {
                 }
             }
     };
-    private RotationDirection direction= RotationDirection.TOWARDS;
-    private ColorOrdering ordering= ColorOrdering.MW_WS2811_RGB;
-    private StrandSpeed speed= StrandSpeed.SLOW;
     private byte npStrand= 0, dataPin= 0, nLeds= 0;
-    private int npStrandIndex= 0, strandSpeedIndex= 0, orderingIndex= 0, directionIndex= 0, patternIndex= 0;
+    private int orderingIndex= 0, directionIndex= 0, patternIndex= 0, speedIndex= 0;
     private short period;
 
     public NeoPixelFragment() {
-        super("NeoPixel");
+        super(R.string.navigation_fragment_neopixel);
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        configAdapter= new NeoPixelConfigAdapter(getActivity(), R.id.sensor_config_entry_layout);
-        configAdapter.setNotifyOnChange(true);
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         setRetainInstance(true);
         return inflater.inflate(R.layout.fragment_neopixel, container, false);
     }
@@ -109,244 +101,238 @@ public class NeoPixelFragment extends ModuleFragmentBase {
     public void onViewCreated(final View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        ((ListView) view.findViewById(R.id.neo_pixel_config)).setAdapter(configAdapter);
-        final ArrayList<NeoPixelConfig> configSettings= new ArrayList<>();
-
-        final String[] strandIdStringValues= getActivity().getResources().getStringArray(R.array.values_neopixel_strand_id);
-        configSettings.add(new NeoPixelConfig(R.string.config_name_neopixel_strand, R.string.config_desc_neopixel_strand,
-                npStrand, R.layout.popup_config_spinner) {
-
-            private Spinner npStrandText;
-
+        Spinner strandSpeeds= (Spinner) view.findViewById(R.id.neopixel_strand_speed);
+        strandSpeeds.setSelection(speedIndex);
+        strandSpeeds.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
-            public void setup(View v) {
-                npStrandText = (Spinner) v.findViewById(R.id.config_value_list);
-                final ArrayAdapter<CharSequence> readModeAdapter = ArrayAdapter.createFromResource(getActivity(),
-                        R.array.values_neopixel_strand_id, android.R.layout.simple_spinner_item);
-                readModeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                npStrandText.setAdapter(readModeAdapter);
-                npStrandText.setSelection(npStrandIndex);
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                speedIndex = position;
             }
 
             @Override
-            public void changeCommitted() {
-                npStrandIndex = npStrandText.getSelectedItemPosition();
-                npStrand = Byte.valueOf(strandIdStringValues[npStrandIndex]);
-                value= npStrand;
+            public void onNothingSelected(AdapterView<?> parent) {
+
             }
         });
-        configSettings.add(new NeoPixelConfig(R.string.config_name_neopixel_data_pin, R.string.config_desc_neopixel_data_pin,
-                dataPin, R.layout.popup_gpio_pin_config) {
 
-            private EditText dataPinText;
-
+        Spinner rotDirection= (Spinner) view.findViewById(R.id.neopixel_rot_direction);
+        rotDirection.setSelection(directionIndex);
+        rotDirection.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
-            public void setup(View v) {
-                dataPinText = (EditText) v.findViewById(R.id.gpio_pin_edit);
-                dataPinText.setText(String.format("%d", dataPin));
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                directionIndex = position;
             }
 
             @Override
-            public void changeCommitted() {
-                dataPin = Byte.valueOf(dataPinText.getText().toString());
-                value= dataPin;
+            public void onNothingSelected(AdapterView<?> parent) {
+
             }
         });
-        configSettings.add(new NeoPixelConfig(R.string.config_name_neopixel_n_leds, R.string.config_desc_neopixel_n_leds,
-                nLeds, R.layout.popup_gpio_pin_config) {
 
-            private EditText nLedsText;
-
+        Spinner colorOrdering= (Spinner) view.findViewById(R.id.neopixel_color_ordering);
+        colorOrdering.setSelection(orderingIndex);
+        colorOrdering.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
-            public void setup(View v) {
-                nLedsText = (EditText) v.findViewById(R.id.gpio_pin_edit);
-                nLedsText.setText(String.format("%d", nLeds));
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                orderingIndex = position;
             }
 
             @Override
-            public void changeCommitted() {
-                nLeds = Byte.valueOf(nLedsText.getText().toString());
-                value= nLeds;
+            public void onNothingSelected(AdapterView<?> parent) {
             }
         });
-        final String[] strandSpeedStringValues= getActivity().getResources().getStringArray(R.array.values_neopixel_strand_speed);
-        configSettings.add(new NeoPixelConfig(R.string.config_name_neopixel_strand_speed, R.string.config_desc_neopixel_strand_speed,
-                strandSpeedStringValues[strandSpeedIndex], R.layout.popup_config_spinner) {
 
-            private Spinner strandSpeedText;
-
+        Spinner neopixelPattern= (Spinner) view.findViewById(R.id.neopixel_pattern);
+        neopixelPattern.setSelection(patternIndex);
+        neopixelPattern.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
-            public void setup(View v) {
-                strandSpeedText = (Spinner) v.findViewById(R.id.config_value_list);
-                final ArrayAdapter<CharSequence> readModeAdapter = ArrayAdapter.createFromResource(getActivity(),
-                        R.array.values_neopixel_strand_speed, android.R.layout.simple_spinner_item);
-                readModeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                strandSpeedText.setAdapter(readModeAdapter);
-                strandSpeedText.setSelection(strandSpeedIndex);
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                patternIndex = position;
             }
 
             @Override
-            public void changeCommitted() {
-                strandSpeedIndex = strandSpeedText.getSelectedItemPosition();
-                speed= StrandSpeed.values()[strandSpeedIndex];
-                value= strandSpeedStringValues[strandSpeedIndex];
+            public void onNothingSelected(AdapterView<?> parent) {
             }
         });
-        final String[] orderingStringValues= getActivity().getResources().getStringArray(R.array.values_neopixel_color_ordering);
-        configSettings.add(new NeoPixelConfig(R.string.config_name_neopixel_color_ordering, R.string.config_desc_neopixel_color_ordering,
-                orderingStringValues[orderingIndex], R.layout.popup_config_spinner) {
 
-            private Spinner colorOrderingText;
+        final EditText npStrandText= (EditText) view.findViewById(R.id.neopixel_strand_value);
+        npStrandText.setText(String.format("%d", npStrand));
 
+        final EditText dataPinText= (EditText) view.findViewById(R.id.neopixel_data_pin_value);
+        dataPinText.setText(String.format("%d", dataPin));
+
+        final EditText nLedText= (EditText) view.findViewById(R.id.neopixel_nleds_value);
+        nLedText.setText(String.format("%d", nLeds));
+
+        final EditText rotPeriodText= (EditText) view.findViewById(R.id.neopixel_rot_period_value);
+        rotPeriodText.setText(String.format("%d", period));
+
+        final TextInputLayout npStrandWrapper = (TextInputLayout) view.findViewById(R.id.neopixel_strand_wrapper);
+
+        View setupView= view.findViewById(R.id.neopixel_setup);
+        Button initBtn= (Button) setupView.findViewById(R.id.layout_two_button_left);
+        initBtn.setText(R.string.label_neopixel_initialize);
+        initBtn.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void setup(View v) {
-                colorOrderingText = (Spinner) v.findViewById(R.id.config_value_list);
-                final ArrayAdapter<CharSequence> readModeAdapter = ArrayAdapter.createFromResource(getActivity(),
-                        R.array.values_neopixel_color_ordering, android.R.layout.simple_spinner_item);
-                readModeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                colorOrderingText.setAdapter(readModeAdapter);
-                colorOrderingText.setSelection(strandSpeedIndex);
-            }
+            public void onClick(View v) {
+                boolean valid = true;
 
-            @Override
-            public void changeCommitted() {
-                orderingIndex = colorOrderingText.getSelectedItemPosition();
-                ordering= ColorOrdering.values()[orderingIndex];
-                value= orderingStringValues[orderingIndex];
-            }
-        });
-        configSettings.add(new NeoPixelConfig(R.string.label_neopixel_initialize, R.string.label_neopixel_free) {
-            @Override
-            public void setup(View v) {
-                v.findViewById(R.id.left_button).setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        neoPixelModule.initializeStrand(npStrand, ordering, speed, dataPin, nLeds);
-                    }
-                });
-                v.findViewById(R.id.right_button).setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        neoPixelModule.deinitializeStrand(npStrand);
-                    }
-                });
-            }
+                try {
+                    npStrand = Byte.valueOf(npStrandText.getText().toString());
+                    npStrandWrapper.setError(null);
+                } catch (Exception e) {
+                    npStrandWrapper.setError(e.getLocalizedMessage());
+                    valid = false;
+                }
 
-            @Override
-            public void changeCommitted() {
-            }
-        });
-        final String[] patternStringValues= getActivity().getResources().getStringArray(R.array.values_neopixel_patterns);
-        configSettings.add(new NeoPixelConfig(R.string.config_name_neopixel_color_pattern, R.string.config_desc_neopixel_color_pattern,
-                patternStringValues[patternIndex], R.layout.popup_config_spinner) {
+                TextInputLayout dataPinWrapper = (TextInputLayout) view.findViewById(R.id.neopixel_data_pin_wrapper);
+                try {
+                    dataPin = Byte.valueOf(dataPinText.getText().toString());
+                    dataPinWrapper.setError(null);
+                } catch (Exception e) {
+                    dataPinWrapper.setError(e.getLocalizedMessage());
+                    valid = false;
+                }
 
-            private Spinner patternText;
+                TextInputLayout nLedWrapper = (TextInputLayout) view.findViewById(R.id.neopixel_nleds_wrapper);
+                try {
+                    nLeds = Byte.valueOf(nLedText.getText().toString());
+                    nLedWrapper.setError(null);
+                } catch (Exception e) {
+                    nLedWrapper.setError(e.getLocalizedMessage());
+                    valid = false;
+                }
 
-            @Override
-            public void setup(View v) {
-                patternText = (Spinner) v.findViewById(R.id.config_value_list);
-                final ArrayAdapter<CharSequence> readModeAdapter = ArrayAdapter.createFromResource(getActivity(),
-                        R.array.values_neopixel_patterns, android.R.layout.simple_spinner_item);
-                readModeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                patternText.setAdapter(readModeAdapter);
-                patternText.setSelection(patternIndex);
-            }
-
-            @Override
-            public void changeCommitted() {
-                patternIndex = patternText.getSelectedItemPosition();
-                value= patternStringValues[patternIndex];
+                if (valid) {
+                    neoPixelModule.initializeStrand(npStrand, ColorOrdering.values()[orderingIndex], StrandSpeed.values()[speedIndex], dataPin, nLeds);
+                }
             }
         });
-        configSettings.add(new NeoPixelConfig(R.string.label_gpio_set_output, R.string.label_gpio_clear_output) {
+        Button freeBtn= (Button) setupView.findViewById(R.id.layout_two_button_right);
+        freeBtn.setText(R.string.label_neopixel_free);
+        freeBtn.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void setup(View v) {
-                v.findViewById(R.id.left_button).setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        neoPixelModule.holdStrand(npStrand);
-                        programmer[patternIndex].program();
-                        neoPixelModule.releaseHold(npStrand);
-                    }
-                });
-                v.findViewById(R.id.right_button).setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        neoPixelModule.clearStrand(npStrand, (byte) 0, nLeds);
-                    }
-                });
-            }
-
-            @Override
-            public void changeCommitted() {
+            public void onClick(View v) {
+                try {
+                    npStrand = Byte.valueOf(npStrandText.getText().toString());
+                    npStrandWrapper.setError(null);
+                    neoPixelModule.deinitializeStrand(npStrand);
+                } catch (Exception e) {
+                    npStrandWrapper.setError(e.getLocalizedMessage());
+                }
             }
         });
-        final String[] directionStringValues= getActivity().getResources().getStringArray(R.array.values_neopixel_rotation_direction);
-        configSettings.add(new NeoPixelConfig(R.string.config_name_neopixel_rotation_direction, R.string.config_desc_neopixel_rotation_direction,
-                directionStringValues[directionIndex], R.layout.popup_config_spinner) {
 
-            private Spinner rotationDirectionText;
-
+        View pixelView= view.findViewById(R.id.neopixel_pixel);
+        Button setBtn= (Button) pixelView.findViewById(R.id.layout_two_button_left);
+        setBtn.setText(R.string.label_gpio_set_output);
+        setBtn.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void setup(View v) {
-                rotationDirectionText = (Spinner) v.findViewById(R.id.config_value_list);
-                final ArrayAdapter<CharSequence> readModeAdapter = ArrayAdapter.createFromResource(getActivity(),
-                        R.array.values_neopixel_rotation_direction, android.R.layout.simple_spinner_item);
-                readModeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                rotationDirectionText.setAdapter(readModeAdapter);
-                rotationDirectionText.setSelection(strandSpeedIndex);
-            }
+            public void onClick(View v) {
+                try {
+                    npStrand = Byte.valueOf(npStrandText.getText().toString());
+                    npStrandWrapper.setError(null);
 
-            @Override
-            public void changeCommitted() {
-                directionIndex = rotationDirectionText.getSelectedItemPosition();
-                direction= RotationDirection.values()[directionIndex];
-                value= directionStringValues[directionIndex];
+                    neoPixelModule.holdStrand(npStrand);
+                    programmer[patternIndex].program();
+                    neoPixelModule.releaseHold(npStrand);
+                } catch (Exception e) {
+                    npStrandWrapper.setError(e.getLocalizedMessage());
+                }
             }
         });
-        configSettings.add(new NeoPixelConfig(R.string.config_name_neopixel_rotation_period, R.string.config_desc_neopixel_rotation_period,
-                period, R.layout.popup_gpio_pin_config) {
-
-            private EditText periodText;
-
+        Button clearBtn= (Button) pixelView.findViewById(R.id.layout_two_button_right);
+        clearBtn.setText(R.string.label_gpio_clear_output);
+        clearBtn.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void setup(View v) {
-                periodText = (EditText) v.findViewById(R.id.gpio_pin_edit);
-                periodText.setText(String.format("%d", period));
-            }
+            public void onClick(View v) {
+                boolean valid = true;
 
-            @Override
-            public void changeCommitted() {
-                period = Short.valueOf(periodText.getText().toString());
-                value= period;
-            }
-        });
-        configSettings.add(new NeoPixelConfig(R.string.label_neopixel_rotate, R.string.label_neopixel_stop) {
-            @Override
-            public void setup(View v) {
-                v.findViewById(R.id.left_button).setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        neoPixelModule.rotate(npStrand, direction, period);
-                    }
-                });
-                v.findViewById(R.id.right_button).setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        neoPixelModule.stopRotation(npStrand);
-                    }
-                });
-            }
+                try {
+                    npStrand = Byte.valueOf(npStrandText.getText().toString());
+                    npStrandWrapper.setError(null);
+                } catch (Exception e) {
+                    npStrandWrapper.setError(e.getLocalizedMessage());
+                    valid = false;
+                }
 
-            @Override
-            public void changeCommitted() {
+                TextInputLayout nLedWrapper = (TextInputLayout) view.findViewById(R.id.neopixel_nleds_wrapper);
+                try {
+                    nLeds = Byte.valueOf(nLedText.getText().toString());
+                    nLedWrapper.setError(null);
+                } catch (Exception e) {
+                    nLedWrapper.setError(e.getLocalizedMessage());
+                    valid = false;
+                }
+
+                if (valid) {
+                    neoPixelModule.clearStrand(npStrand, (byte) 0, nLeds);
+                }
             }
         });
-        configAdapter.addAll(configSettings);
+
+        View rotateView= view.findViewById(R.id.neopixel_rotate);
+        Button rotateBtn= (Button) rotateView.findViewById(R.id.layout_two_button_left);
+        rotateBtn.setText(R.string.label_neopixel_rotate);
+        rotateBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                boolean valid = true;
+
+                try {
+                    npStrand = Byte.valueOf(npStrandText.getText().toString());
+                    npStrandWrapper.setError(null);
+                } catch (Exception e) {
+                    npStrandWrapper.setError(e.getLocalizedMessage());
+                    valid = false;
+                }
+
+                TextInputLayout periodWrapper = (TextInputLayout) view.findViewById(R.id.neopixel_rot_period_wrapper);
+                try {
+                    period = Short.valueOf(rotPeriodText.getText().toString());
+                    periodWrapper.setError(null);
+                } catch (Exception e) {
+                    periodWrapper.setError(e.getLocalizedMessage());
+                    valid = false;
+                }
+
+                if (valid) {
+                    neoPixelModule.rotate(npStrand, RotationDirection.values()[directionIndex], period);
+                }
+            }
+        });
+        Button stopBtn= (Button) rotateView.findViewById(R.id.layout_two_button_right);
+        stopBtn.setText(R.string.label_neopixel_stop);
+        stopBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    npStrand = Byte.valueOf(npStrandText.getText().toString());
+                    npStrandWrapper.setError(null);
+                    neoPixelModule.stopRotation(npStrand);
+                } catch (Exception e) {
+                    npStrandWrapper.setError(e.getLocalizedMessage());
+                }
+            }
+        });
     }
 
     @Override
     protected void boardReady() throws UnsupportedModuleException{
         neoPixelModule= mwBoard.getModule(NeoPixel.class);
+    }
+
+    @Override
+    protected void fillHelpOptionAdapter(HelpOptionAdapter adapter) {
+        adapter.add(new HelpOption(R.string.config_name_neopixel_strand, R.string.config_desc_neopixel_strand));
+        adapter.add(new HelpOption(R.string.config_name_neopixel_data_pin, R.string.config_desc_neopixel_data_pin));
+        adapter.add(new HelpOption(R.string.config_name_neopixel_n_leds, R.string.config_desc_neopixel_n_leds));
+        adapter.add(new HelpOption(R.string.config_name_neopixel_strand_speed, R.string.config_desc_neopixel_strand_speed));
+        adapter.add(new HelpOption(R.string.config_name_neopixel_color_ordering, R.string.config_desc_neopixel_color_ordering));
+
+        adapter.add(new HelpOption(R.string.config_name_neopixel_color_pattern, R.string.config_desc_neopixel_color_pattern));
+
+        adapter.add(new HelpOption(R.string.config_name_neopixel_rotation_direction, R.string.config_desc_neopixel_rotation_direction));
+        adapter.add(new HelpOption(R.string.config_name_neopixel_rotation_period, R.string.config_desc_neopixel_rotation_period));
     }
 }

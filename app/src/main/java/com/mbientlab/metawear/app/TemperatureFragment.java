@@ -31,16 +31,15 @@
 
 package com.mbientlab.metawear.app;
 
-import android.content.DialogInterface;
 import android.os.Bundle;
-import android.support.v7.app.AlertDialog;
-import android.view.LayoutInflater;
+import android.support.design.widget.TextInputLayout;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
-import android.widget.TextView;
 
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
@@ -48,7 +47,11 @@ import com.mbientlab.metawear.AsyncOperation;
 import com.mbientlab.metawear.Message;
 import com.mbientlab.metawear.RouteManager;
 import com.mbientlab.metawear.UnsupportedModuleException;
+import com.mbientlab.metawear.app.help.HelpOption;
+import com.mbientlab.metawear.app.help.HelpOptionAdapter;
 import com.mbientlab.metawear.module.MultiChannelTemperature;
+import com.mbientlab.metawear.module.SingleChannelTemperature;
+import com.mbientlab.metawear.module.Temperature;
 import com.mbientlab.metawear.module.Timer;
 
 import java.util.ArrayList;
@@ -58,100 +61,154 @@ import java.util.List;
  * Created by etsai on 8/19/2015.
  */
 public class TemperatureFragment extends SingleDataSensorFragment {
-    private static final int TEMP_SAMPLE_PERIOD= 500;
+    private static final int TEMP_SAMPLE_PERIOD= 500, SINGLE_EXT_THERM_INDEX= 1;
     private static final String STREAM_KEY= "temp_stream";
 
     private byte gpioDataPin= 0, gpioPulldownPin= 1;
-    private boolean activeHigh= true;
+    private boolean activeHigh= false;
 
     private long startTime= -1;
-    private MultiChannelTemperature multiChnlTempModule;
+    private Temperature tempModule;
     private Timer timerModule;
     private List<MultiChannelTemperature.Source> availableSources= null;
-    private List<String> spinnerEntries;
+    private List<String> spinnerEntries= null;
     private int selectedSourceIndex= 0;
+    private final RouteManager.MessageHandler tempMsgHandler= new RouteManager.MessageHandler() {
+        @Override
+        public void process(Message message) {
+            final Float celsius = message.getData(Float.class);
 
-    private TextView configValueText;
+            LineData data = chart.getData();
+
+            if (startTime == -1) {
+                data.addXValue("0");
+                startTime = System.currentTimeMillis();
+            } else {
+                data.addXValue(String.format("%.2f", (System.currentTimeMillis() - startTime) / 1000.f));
+            }
+
+            data.addEntry(new Entry(celsius, sampleCount), 0);
+
+            sampleCount++;
+        }
+    };
+
+    private Spinner sourceSelector;
 
     public TemperatureFragment() {
-        super("MultiChannel Temp", "celsius", R.layout.fragment_temperature, 15, 45);
-        chartDescription= "Ambient temperature (\u00B0C) vs. Time";
-
+        super(R.string.navigation_fragment_temperature, "celsius", R.layout.fragment_temperature, 15, 45);
     }
 
     @Override
     public void onViewCreated(final View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        ((TextView) view.findViewById(R.id.config_name)).setText(R.string.config_name_temp_source);
-
-        configValueText= ((TextView) view.findViewById(R.id.config_value));
-        if (availableSources != null) {
-            configValueText.setText(spinnerEntries.get(selectedSourceIndex));
-        }
-
-        view.findViewById(R.id.edit_config_value).setOnClickListener(new View.OnClickListener() {
+        sourceSelector= (Spinner) view.findViewById(R.id.temperature_source);
+        sourceSelector.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
-            public void onClick(View view) {
-                final View dialogLayout = LayoutInflater.from(getActivity()).inflate(R.layout.popup_multi_chnl_temp_config, fragContainer, false);
-                final Spinner configValue = (Spinner) dialogLayout.findViewById(R.id.temp_source_selector),
-                        extActiveText= (Spinner) dialogLayout.findViewById(R.id.spinner);
-                final EditText gpioDataPinText= (EditText) dialogLayout.findViewById(R.id.editText),
-                        gpioPulldownPinText= (EditText) dialogLayout.findViewById(R.id.editText2);
+            public void onItemSelected(AdapterView<?> parent, View innerView, int position, long id) {
+                if (tempModule instanceof MultiChannelTemperature) {
+                    int[] extThermResIds = new int[]{R.id.ext_thermistor_data_pin_wrapper, R.id.ext_thermistor_pulldown_pin_wrapper,
+                            R.id.ext_thermistor_active_setting_title, R.id.ext_thermistor_active_setting
+                    };
 
-                gpioDataPinText.setText(String.format("%d", gpioDataPin));
-                gpioPulldownPinText.setText(String.format("%d", gpioPulldownPin));
-                extActiveText.setAdapter(new ArrayAdapter<>(getActivity(), R.layout.simple_list_entry, R.id.list_entry_name, new String[]{"True", "False"}));
-                extActiveText.setSelection(activeHigh ? 0 : 1);
-
-                configValue.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-                    @Override
-                    public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                        int[] extThermResIds= new int[] {R.id.ext_thermistor_data_pin, R.id.editText,
-                                R.id.ext_thermistor_pulldown_pin, R.id.editText2,
-                                R.id.ext_thermistor_active, R.id.spinner
-                        };
-
-                        for(int resId: extThermResIds) {
-                            if (availableSources.get(i) instanceof MultiChannelTemperature.ExtThermistor) {
-                                dialogLayout.findViewById(resId).setVisibility(View.VISIBLE);
-                            } else {
-                                dialogLayout.findViewById(resId).setVisibility(View.GONE);
-                            }
+                    for (int resId : extThermResIds) {
+                        if (availableSources.get(position) instanceof MultiChannelTemperature.ExtThermistor) {
+                            view.findViewById(resId).setVisibility(View.VISIBLE);
+                        } else {
+                            view.findViewById(resId).setVisibility(View.GONE);
                         }
                     }
+                } else if (tempModule instanceof SingleChannelTemperature) {
+                    int[] extThermResIds = new int[]{R.id.ext_thermistor_data_pin_wrapper, R.id.ext_thermistor_pulldown_pin_wrapper
+                    };
 
-                    @Override
-                    public void onNothingSelected(AdapterView<?> adapterView) {
-
+                    for (int resId : extThermResIds) {
+                        if (position == SINGLE_EXT_THERM_INDEX) {
+                            view.findViewById(resId).setVisibility(View.VISIBLE);
+                        } else {
+                            view.findViewById(resId).setVisibility(View.GONE);
+                        }
                     }
-                });
-                configValue.setAdapter(new ArrayAdapter<>(getActivity(), R.layout.simple_list_entry, R.id.list_entry_name, spinnerEntries));
-                configValue.setSelection(selectedSourceIndex);
+                }
 
-                ((TextView) dialogLayout.findViewById(R.id.config_description)).setText(R.string.config_desc_temp_source);
+                selectedSourceIndex = position;
+            }
 
-                AlertDialog.Builder builder = new AlertDialog.Builder(getActivity()).setTitle(R.string.config_name_temp_source)
-                        .setPositiveButton(R.string.label_commit, new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                selectedSourceIndex = configValue.getSelectedItemPosition();
-                                configValueText.setText(spinnerEntries.get(selectedSourceIndex));
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
 
-                                if (availableSources.get(selectedSourceIndex) instanceof MultiChannelTemperature.ExtThermistor) {
-                                    gpioDataPin= Byte.valueOf(gpioDataPinText.getText().toString());
-                                    gpioPulldownPin= Byte.valueOf(gpioPulldownPinText.getText().toString());
-                                    activeHigh= Boolean.valueOf((String) extActiveText.getSelectedItem());
+            }
+        });
+        if (spinnerEntries != null) {
+            final ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_item, spinnerEntries);
+            spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            sourceSelector.setAdapter(spinnerAdapter);
+            sourceSelector.setSelection(selectedSourceIndex);
+        }
 
-                                    ((MultiChannelTemperature.ExtThermistor) availableSources.get(selectedSourceIndex))
-                                            .configure(gpioDataPin, gpioPulldownPin, activeHigh);
-                                }
-                            }
-                        })
-                        .setNegativeButton(R.string.label_cancel, null);
+        final EditText extThermPinText= (EditText) view.findViewById(R.id.ext_thermistor_data_pin);
+        extThermPinText.setText(String.format("%d", gpioDataPin));
+        extThermPinText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
 
-                builder.setView(dialogLayout);
-                builder.show();
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                TextInputLayout extThermWrapper = (TextInputLayout) view.findViewById(R.id.ext_thermistor_data_pin_wrapper);
+                try {
+                    gpioDataPin = Byte.valueOf(s.toString());
+                    view.findViewById(R.id.sample_control).setEnabled(true);
+                    extThermWrapper.setError(null);
+                } catch (Exception e) {
+                    view.findViewById(R.id.sample_control).setEnabled(false);
+                    extThermWrapper.setError(e.getLocalizedMessage());
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
+
+        final EditText pulldownPinText= (EditText) view.findViewById(R.id.ext_thermistor_pulldown_pin);
+        pulldownPinText.setText(String.format("%d", gpioPulldownPin));
+        pulldownPinText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                TextInputLayout extThermWrapper = (TextInputLayout) view.findViewById(R.id.ext_thermistor_pulldown_pin_wrapper);
+
+                try {
+                    gpioPulldownPin = Byte.valueOf(s.toString());
+                    view.findViewById(R.id.sample_control).setEnabled(true);
+                    extThermWrapper.setError(null);
+                } catch (Exception e) {
+                    view.findViewById(R.id.sample_control).setEnabled(false);
+                    extThermWrapper.setError(e.getLocalizedMessage());
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
+
+        final Spinner activeSelections= (Spinner) view.findViewById(R.id.ext_thermistor_active_setting);
+        activeSelections.setSelection(activeHigh ? 1 : 0);
+        activeSelections.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                activeHigh = (position != 0);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
             }
         });
     }
@@ -159,56 +216,88 @@ public class TemperatureFragment extends SingleDataSensorFragment {
     @Override
     protected void boardReady() throws UnsupportedModuleException {
         timerModule= mwBoard.getModule(Timer.class);
-        multiChnlTempModule= mwBoard.getModule(MultiChannelTemperature.class);
-        availableSources= multiChnlTempModule.getSources();
+        tempModule= mwBoard.getModule(Temperature.class);
 
-        spinnerEntries= new ArrayList<>();
-        for(byte i= 0; i < availableSources.size(); i++) {
-            spinnerEntries.add(availableSources.get(i).getName());
+        spinnerEntries = new ArrayList<>();
+        if (tempModule instanceof MultiChannelTemperature) {
+            availableSources = ((MultiChannelTemperature) tempModule).getSources();
+
+            for (byte i = 0; i < availableSources.size(); i++) {
+                spinnerEntries.add(availableSources.get(i).getName());
+            }
+        } else if (tempModule instanceof SingleChannelTemperature) {
+            spinnerEntries.add("NRF On-Die Sensor");
+            spinnerEntries.add("External Thermistor");
         }
 
-        configValueText.setText(spinnerEntries.get(selectedSourceIndex));
+        final ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_item, spinnerEntries);
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        sourceSelector.setAdapter(spinnerAdapter);
+        sourceSelector.setSelection(selectedSourceIndex);
+    }
+
+    @Override
+    protected void fillHelpOptionAdapter(HelpOptionAdapter adapter) {
+        adapter.add(new HelpOption(R.string.config_name_temp_source, R.string.config_desc_temp_source));
+        adapter.add(new HelpOption(R.string.config_name_temp_active, R.string.config_desc_temp_active));
+        adapter.add(new HelpOption(R.string.config_name_temp_data_pin, R.string.config_desc_temp_data_pin));
+        adapter.add(new HelpOption(R.string.config_name_temp_pulldown_pin, R.string.config_desc_temp_pulldown_pin));
     }
 
     @Override
     protected void setup() {
-        multiChnlTempModule.routeData().fromSource(availableSources.get(selectedSourceIndex)).stream(STREAM_KEY).commit()
-                .onComplete(new AsyncOperation.CompletionHandler<RouteManager>() {
-                    @Override
-                    public void success(RouteManager result) {
-                        streamRouteManager= result;
-                        result.subscribe(STREAM_KEY, new RouteManager.MessageHandler() {
-                            @Override
-                            public void process(Message message) {
-                                final Float celsius = message.getData(Float.class);
-
-                                LineData data = chart.getData();
-
-                                if (startTime == -1) {
-                                    data.addXValue("0");
-                                    startTime= System.currentTimeMillis();
-                                } else {
-                                    data.addXValue(String.format("%.2f", (System.currentTimeMillis() - startTime) / 1000.f));
-                                }
-
-                                data.addEntry(new Entry(celsius, sampleCount), 0);
-
-                                sampleCount++;
-                            }
-                        });
-                    }
-                });
-        timerModule.scheduleTask(new Timer.Task() {
-            @Override
-            public void commands() {
-                multiChnlTempModule.readTemperature(availableSources.get(selectedSourceIndex));
+        if (tempModule instanceof MultiChannelTemperature) {
+            if (availableSources.get(selectedSourceIndex) instanceof MultiChannelTemperature.ExtThermistor) {
+                ((MultiChannelTemperature.ExtThermistor) availableSources.get(selectedSourceIndex))
+                        .configure(gpioDataPin, gpioPulldownPin, activeHigh);
             }
-        }, TEMP_SAMPLE_PERIOD, false).onComplete(new AsyncOperation.CompletionHandler<Timer.Controller>() {
-            @Override
-            public void success(Timer.Controller result) {
-                result.start();
+
+            ((MultiChannelTemperature) tempModule).routeData().fromSource(availableSources.get(selectedSourceIndex)).stream(STREAM_KEY).commit()
+                    .onComplete(new AsyncOperation.CompletionHandler<RouteManager>() {
+                        @Override
+                        public void success(RouteManager result) {
+                            streamRouteManager = result;
+                            result.subscribe(STREAM_KEY, tempMsgHandler);
+                        }
+                    });
+            timerModule.scheduleTask(new Timer.Task() {
+                @Override
+                public void commands() {
+                    ((MultiChannelTemperature) tempModule).readTemperature(availableSources.get(selectedSourceIndex));
+                }
+            }, TEMP_SAMPLE_PERIOD, false).onComplete(new AsyncOperation.CompletionHandler<Timer.Controller>() {
+                @Override
+                public void success(Timer.Controller result) {
+                    result.start();
+                }
+            });
+        } else if (tempModule instanceof SingleChannelTemperature) {
+            if (selectedSourceIndex == SINGLE_EXT_THERM_INDEX) {
+                ((SingleChannelTemperature) tempModule).enableThermistorMode(gpioDataPin, gpioPulldownPin);
+            } else {
+                ((SingleChannelTemperature) tempModule).disableThermistorMode();
             }
-        });
+
+            tempModule.routeData().fromSensor().stream(STREAM_KEY).commit()
+                    .onComplete(new AsyncOperation.CompletionHandler<RouteManager>() {
+                        @Override
+                        public void success(RouteManager result) {
+                            streamRouteManager = result;
+                            result.subscribe(STREAM_KEY, tempMsgHandler);
+                        }
+                    });
+            timerModule.scheduleTask(new Timer.Task() {
+                @Override
+                public void commands() {
+                    tempModule.readTemperature();
+                }
+            }, TEMP_SAMPLE_PERIOD, false).onComplete(new AsyncOperation.CompletionHandler<Timer.Controller>() {
+                @Override
+                public void success(Timer.Controller result) {
+                    result.start();
+                }
+            });
+        }
     }
 
     @Override

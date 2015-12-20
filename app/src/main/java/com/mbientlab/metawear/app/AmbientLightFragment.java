@@ -31,12 +31,22 @@
 
 package com.mbientlab.metawear.app;
 
+import android.os.Bundle;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Spinner;
+import android.widget.TextView;
+
+import com.github.mikephil.charting.components.YAxis;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.mbientlab.metawear.AsyncOperation;
 import com.mbientlab.metawear.Message;
 import com.mbientlab.metawear.RouteManager;
 import com.mbientlab.metawear.UnsupportedModuleException;
+import com.mbientlab.metawear.app.help.HelpOption;
+import com.mbientlab.metawear.app.help.HelpOptionAdapter;
 import com.mbientlab.metawear.module.Ltr329AmbientLight;
 
 import static com.mbientlab.metawear.module.Ltr329AmbientLight.*;
@@ -46,12 +56,69 @@ import static com.mbientlab.metawear.module.Ltr329AmbientLight.*;
  */
 public class AmbientLightFragment extends SingleDataSensorFragment {
     private static final String STREAM_KEY= "light_stream";
+
+    private int sensorGainIndex= 0;
     private Ltr329AmbientLight ltr329Module;
     private long startTime= -1;
 
     public AmbientLightFragment() {
-        super("Ambient Light", "illuminance", R.layout.fragment_sensor, 0.5f, 32000f);
-        chartDescription= "Illuminance (lx) vs. Time";
+        super(R.string.navigation_fragment_light, "illuminance", R.layout.fragment_sensor_config_spinner, 1, 64000f);
+    }
+
+    @Override
+    public void onViewCreated(final View view, Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
+        ((TextView) view.findViewById(R.id.config_option_title)).setText(R.string.config_name_light_gain);
+
+        Spinner gainSelection= (Spinner) view.findViewById(R.id.config_option_spinner);
+        gainSelection.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                sensorGainIndex = position;
+
+                switch (Gain.values()[sensorGainIndex]) {
+                    case LTR329_GAIN_1X:
+                        min = 1f;
+                        max = 64000f;
+                        break;
+                    case LTR329_GAIN_2X:
+                        min = 0.5f;
+                        max = 32000f;
+                        break;
+                    case LTR329_GAIN_4X:
+                        min = 0.25f;
+                        max = 16000f;
+                        break;
+                    case LTR329_GAIN_8X:
+                        min = 0.125f;
+                        max = 8000f;
+                        break;
+                    case LTR329_GAIN_48X:
+                        min = 0.02f;
+                        max = 1300f;
+                        break;
+                    case LTR329_GAIN_96X:
+                        min = 0.01f;
+                        max = 600f;
+                        break;
+                }
+
+                final YAxis leftAxis = chart.getAxisLeft();
+                leftAxis.setAxisMaxValue(max);
+                leftAxis.setAxisMinValue(min);
+                refreshChart(false);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+        ArrayAdapter<CharSequence> spinnerAdapter= ArrayAdapter.createFromResource(getContext(), R.array.values_light_gain, android.R.layout.simple_spinner_item);
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        gainSelection.setAdapter(spinnerAdapter);
+        gainSelection.setSelection(sensorGainIndex);
     }
 
     @Override
@@ -60,8 +127,13 @@ public class AmbientLightFragment extends SingleDataSensorFragment {
     }
 
     @Override
+    protected void fillHelpOptionAdapter(HelpOptionAdapter adapter) {
+        adapter.add(new HelpOption(R.string.config_name_light_gain, R.string.config_desc_light_gain));
+    }
+
+    @Override
     protected void setup() {
-        ltr329Module.configure().setGain(Gain.LTR329_GAIN_2X)
+        ltr329Module.configure().setGain(Gain.values()[sensorGainIndex])
                 .setMeasurementRate(MeasurementRate.LTR329_RATE_500MS)
                 .setIntegrationTime(IntegrationTime.LTR329_TIME_100MS)
                 .commit();

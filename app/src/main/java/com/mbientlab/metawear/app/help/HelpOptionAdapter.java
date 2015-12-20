@@ -29,32 +29,50 @@
  * contact MbientLab Inc, at www.mbientlab.com.
  */
 
-apply plugin: 'com.android.application'
+package com.mbientlab.metawear.app.help;
 
-android {
-    compileSdkVersion 23
-    buildToolsVersion "23.0.1"
+import android.content.Context;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.TextView;
 
-    defaultConfig {
-        applicationId "com.mbientlab.metawear.app"
-        minSdkVersion 18
-        targetSdkVersion 23
-        versionCode 13
-        versionName "3.2.0"
+import com.mbientlab.metawear.app.R;
+
+/**
+ * Created by etsai on 11/16/2015.
+ */
+public class HelpOptionAdapter extends ArrayAdapter<HelpOption> {
+    public HelpOptionAdapter(Context context, int resource) {
+        super(context, resource);
     }
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+
+    @Override
+    public View getView(int position, View convertView, final ViewGroup parent) {
+        final ViewHolder viewHolder;
+
+        if (convertView == null) {
+            convertView= LayoutInflater.from(getContext()).inflate(R.layout.layout_config_help_entry, parent, false);
+
+            viewHolder= new ViewHolder();
+            viewHolder.optionName= (TextView) convertView.findViewById(R.id.config_option_name);
+            viewHolder.optionDescription= (TextView) convertView.findViewById(R.id.config_option_description);
+
+            convertView.setTag(viewHolder);
+        } else {
+            viewHolder= (ViewHolder) convertView.getTag();
         }
-    }
-}
 
-dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile 'com.mbientlab:metawear:2.3.0'
-    compile 'com.mbientlab.bletoolbox:scanner:0.2.0'
-    compile 'com.github.PhilJay:MPAndroidChart:v2.1.3'
-    compile 'com.android.support:appcompat-v7:23.1.1'
-    compile 'com.android.support:design:23.1.1'
+        final HelpOption current = getItem(position);
+        viewHolder.optionDescription.setText(current.description);
+        viewHolder.optionName.setText(current.name);
+
+        return convertView;
+    }
+
+    private class ViewHolder {
+        public TextView optionName, optionDescription;
+
+    }
 }

@@ -31,17 +31,17 @@
 
 package com.mbientlab.metawear.app;
 
-import android.content.DialogInterface;
 import android.os.Bundle;
-import android.support.v7.app.AlertDialog;
+import android.support.design.widget.TextInputLayout;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.EditText;
-import android.widget.TextView;
-import android.widget.Toast;
 
 import com.mbientlab.metawear.UnsupportedModuleException;
+import com.mbientlab.metawear.app.help.HelpOption;
+import com.mbientlab.metawear.app.help.HelpOptionAdapter;
 import com.mbientlab.metawear.module.Haptic;
 
 /**
@@ -51,7 +51,7 @@ public class HapticFragment extends ModuleFragmentBase {
     private Haptic hapticModule;
 
     public HapticFragment() {
-        super("Haptic");
+        super(R.string.navigation_fragment_haptic);
     }
 
     @Override
@@ -63,49 +63,52 @@ public class HapticFragment extends ModuleFragmentBase {
         final EditText dutyCycleText= (EditText) v.findViewById(R.id.duty_cycle_value),
                 pulseWidthText= (EditText) v.findViewById(R.id.pulse_width_value);
 
-        v.findViewById(R.id.haptic_start_motor).setOnClickListener(new View.OnClickListener() {
+        final TextInputLayout dutyCycleWrapper= (TextInputLayout) v.findViewById(R.id.duty_cycle_value_wrapper),
+                pulseWidthWrapper= (TextInputLayout) v.findViewById(R.id.pulse_width_value_wrapper);
+
+        Button startMotorBtn= (Button) v.findViewById(R.id.layout_two_button_left);
+        startMotorBtn.setText(R.string.label_haptic_start_motor);
+        startMotorBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                float dutyCycle = 0;
+                short pulseWidth = 0;
+                boolean valid = true;
+
                 try {
-                    hapticModule.startMotor(Float.valueOf(dutyCycleText.getText().toString()),
-                            Short.valueOf(pulseWidthText.getText().toString()));
+                    dutyCycle = Float.valueOf(dutyCycleText.getText().toString());
+                    dutyCycleWrapper.setError(null);
                 } catch (Exception e) {
-                    Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+                    valid = false;
+                    dutyCycleWrapper.setError(e.getLocalizedMessage());
+                }
+
+                try {
+                    pulseWidth = Short.valueOf(pulseWidthText.getText().toString());
+                    pulseWidthWrapper.setError(null);
+                } catch (Exception e) {
+                    valid = false;
+                    pulseWidthWrapper.setError(e.getLocalizedMessage());
+                }
+
+                if (valid) {
+                    dutyCycleText.setError(null);
+                    pulseWidthText.setError(null);
+                    hapticModule.startMotor(dutyCycle, pulseWidth);
                 }
             }
         });
-        v.findViewById(R.id.haptic_start_buzzer).setOnClickListener(new View.OnClickListener() {
+
+        Button startBuzzerBtn= (Button) v.findViewById(R.id.layout_two_button_right);
+        startBuzzerBtn.setText(R.string.label_haptic_start_buzzer);
+        startBuzzerBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 try {
                     hapticModule.startBuzzer(Short.valueOf(pulseWidthText.getText().toString()));
                 } catch (Exception e) {
-                    Toast.makeText(getActivity(), e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+                    pulseWidthText.setError(e.getLocalizedMessage());
                 }
-            }
-        });
-        v.findViewById(R.id.duty_cycle_help).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                View dialogLayout = LayoutInflater.from(getActivity()).inflate(R.layout.simple_list_entry, container, false);
-                ((TextView) dialogLayout.findViewById(R.id.list_entry_name)).setText(R.string.config_desc_haptic_duty_cycle);
-
-                AlertDialog.Builder builder = new AlertDialog.Builder(getActivity()).setTitle(R.string.config_name_haptic_duty_cycle)
-                        .setPositiveButton(R.string.label_ok, null)
-                        .setView(dialogLayout);
-                builder.show();
-            }
-        });
-        v.findViewById(R.id.pulse_width_help).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                View dialogLayout = LayoutInflater.from(getActivity()).inflate(R.layout.simple_list_entry, container, false);
-                ((TextView) dialogLayout.findViewById(R.id.list_entry_name)).setText(R.string.config_desc_haptic_pulse_width);
-
-                AlertDialog.Builder builder = new AlertDialog.Builder(getActivity()).setTitle(R.string.config_name_haptic_pulse_width)
-                        .setPositiveButton(R.string.label_ok, null)
-                        .setView(dialogLayout);
-                builder.show();
             }
         });
 
@@ -115,5 +118,11 @@ public class HapticFragment extends ModuleFragmentBase {
     @Override
     protected void boardReady() throws UnsupportedModuleException {
         hapticModule= mwBoard.getModule(Haptic.class);
+    }
+
+    @Override
+    protected void fillHelpOptionAdapter(HelpOptionAdapter adapter) {
+        adapter.add(new HelpOption(R.string.config_name_haptic_duty_cycle, R.string.config_desc_haptic_duty_cycle));
+        adapter.add(new HelpOption(R.string.config_name_haptic_pulse_width, R.string.config_desc_haptic_pulse_width));
     }
 }

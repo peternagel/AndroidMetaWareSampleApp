@@ -17,7 +17,7 @@ import com.mbientlab.metawear.MetaWearBoard;
 
 import java.util.UUID;
 
-public class ScannerActivity extends AppCompatActivity implements ScannerCommunicationBus, ScannerListener, ServiceConnection {
+public class ScannerActivity extends AppCompatActivity implements ScannerCommunicationBus, ServiceConnection {
     private final static UUID[] serviceUuids;
     public static final int REQUEST_START_APP= 1;
 
@@ -30,7 +30,6 @@ public class ScannerActivity extends AppCompatActivity implements ScannerCommuni
 
     private MetaWearBleService.LocalBinder serviceBinder;
     private MetaWearBoard mwBoard;
-    private BleScannerFragment scannerFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,7 +51,7 @@ public class ScannerActivity extends AppCompatActivity implements ScannerCommuni
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         switch(requestCode) {
             case REQUEST_START_APP:
-                scannerFragment.startBleScan();
+                ((BleScannerFragment) getFragmentManager().findFragmentById(R.id.scanner_fragment)).startBleScan();
                 break;
         }
         super.onActivityResult(requestCode, resultCode, data);
@@ -117,10 +116,5 @@ public class ScannerActivity extends AppCompatActivity implements ScannerCommuni
     @Override
     public long getScanDuration() {
         return 10000L;
-    }
-
-    @Override
-    public void retrieveFragmentReference(BleScannerFragment scannerFragment) {
-        this.scannerFragment= scannerFragment;
     }
 }

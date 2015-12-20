@@ -36,32 +36,103 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin" >
 
-    <ListView
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:id="@+id/ibeacon_settings" />
-
-    <LinearLayout
-        android:orientation="horizontal"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        style="?android:attr/buttonBarStyle" >
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/label_enable"
-            style="?android:attr/buttonBarButtonStyle"
-            android:layout_weight="1"
-            android:id="@+id/ibeacon_enable" />
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
 
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/label_disable"
-            style="?android:attr/buttonBarButtonStyle"
-            android:layout_weight="1"
-            android:id="@+id/ibeacon_disable" />
-    </LinearLayout>
+            <android.support.design.widget.TextInputLayout
+                xmlns:app="http://schemas.android.com/apk/res-auto"
+                app:hintTextAppearance="@style/EditTextLabel"
+                android:hint="@string/config_name_ad_device_name"
+                android:id="@+id/ibeacon_uuid_wrapper"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <EditText android:id="@+id/ibeacon_uuid_value" android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text" />
+
+            </android.support.design.widget.TextInputLayout>
+
+            <android.support.design.widget.TextInputLayout
+                xmlns:app="http://schemas.android.com/apk/res-auto"
+                app:hintTextAppearance="@style/EditTextLabel"
+                android:hint="@string/config_name_ibeacon_major"
+                android:id="@+id/ibeacon_major_wrapper"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <EditText android:id="@+id/ibeacon_major_value" android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number" />
+
+            </android.support.design.widget.TextInputLayout>
+
+            <android.support.design.widget.TextInputLayout
+                xmlns:app="http://schemas.android.com/apk/res-auto"
+                app:hintTextAppearance="@style/EditTextLabel"
+                android:hint="@string/config_name_ibeacon_minor"
+                android:id="@+id/ibeacon_minor_wrapper"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <EditText android:id="@+id/ibeacon_minor_value" android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number" />
+
+            </android.support.design.widget.TextInputLayout>
+
+            <android.support.design.widget.TextInputLayout
+                xmlns:app="http://schemas.android.com/apk/res-auto"
+                app:hintTextAppearance="@style/EditTextLabel"
+                android:hint="@string/config_name_ibeacon_rx"
+                android:id="@+id/ibeacon_rx_power_wrapper"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <EditText android:id="@+id/ibeacon_rx_power_value" android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberSigned" />
+
+            </android.support.design.widget.TextInputLayout>
+
+            <android.support.design.widget.TextInputLayout
+                xmlns:app="http://schemas.android.com/apk/res-auto"
+                app:hintTextAppearance="@style/EditTextLabel"
+                android:hint="@string/config_name_ibeacon_tx"
+                android:id="@+id/ibeacon_tx_power_wrapper"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <EditText android:id="@+id/ibeacon_tx_power_value" android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberSigned" />
+
+            </android.support.design.widget.TextInputLayout>
+
+            <android.support.design.widget.TextInputLayout
+                xmlns:app="http://schemas.android.com/apk/res-auto"
+                app:hintTextAppearance="@style/EditTextLabel"
+                android:hint="@string/config_name_ibeacon_period"
+                android:id="@+id/ibeacon_period_wrapper"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <EditText android:id="@+id/ibeacon_period_value" android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number" />
+
+            </android.support.design.widget.TextInputLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <include layout="@layout/layout_two_button" android:id="@+id/ibeacon_control"/>
+
 </LinearLayout>

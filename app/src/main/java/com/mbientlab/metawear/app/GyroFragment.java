@@ -31,9 +31,19 @@
 
 package com.mbientlab.metawear.app;
 
+import android.os.Bundle;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Spinner;
+import android.widget.TextView;
+
+import com.github.mikephil.charting.components.YAxis;
 import com.mbientlab.metawear.AsyncOperation;
 import com.mbientlab.metawear.RouteManager;
 import com.mbientlab.metawear.UnsupportedModuleException;
+import com.mbientlab.metawear.app.help.HelpOption;
+import com.mbientlab.metawear.app.help.HelpOptionAdapter;
 import com.mbientlab.metawear.data.Units;
 import com.mbientlab.metawear.module.Gyro;
 
@@ -41,14 +51,16 @@ import com.mbientlab.metawear.module.Gyro;
  * Created by etsai on 8/19/2015.
  */
 public class GyroFragment extends ThreeAxisChartFragment {
-    private static final float GYR_RANGE= 1000.f, GYR_ODR= 25.f;
+    private static final float[] AVAILABLE_RANGES= {125.f, 250.f, 500.f, 1000.f, 2000.f};
+    private static final float INITIAL_RANGE= 125.f, GYR_ODR= 25.f;
     private static final String STREAM_KEY= "gyro_stream";
 
     private Gyro gyroModule= null;
+    private int rangeIndex= 0;
 
     public GyroFragment() {
-        super("spin", String.format("Rotation rate (%s) around XYZ axes vs. Time", Units.DEGS_PER_SEC),
-                "Gyro", STREAM_KEY, -GYR_RANGE, GYR_RANGE, GYR_ODR);
+        super("rotation", R.layout.fragment_sensor_config_spinner,
+                R.string.navigation_fragment_gyro, STREAM_KEY, -INITIAL_RANGE, INITIAL_RANGE, GYR_ODR);
     }
 
     @Override
@@ -57,9 +69,44 @@ public class GyroFragment extends ThreeAxisChartFragment {
     }
 
     @Override
+    protected void fillHelpOptionAdapter(HelpOptionAdapter adapter) {
+        adapter.add(new HelpOption(R.string.config_name_gyro_range, R.string.config_desc_gyro_range));
+    }
+
+    @Override
+    public void onViewCreated(final View view, Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
+        final YAxis leftAxis = chart.getAxisLeft();
+
+        ((TextView) view.findViewById(R.id.config_option_title)).setText(R.string.config_name_gyro_range);
+
+        Spinner rotationRangeSelection= (Spinner) view.findViewById(R.id.config_option_spinner);
+        rotationRangeSelection.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                rangeIndex = position;
+                leftAxis.setAxisMaxValue(AVAILABLE_RANGES[rangeIndex]);
+                leftAxis.setAxisMinValue(-AVAILABLE_RANGES[rangeIndex]);
+
+                refreshChart(false);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+        ArrayAdapter<CharSequence> spinnerAdapter= ArrayAdapter.createFromResource(getContext(), R.array.values_gyro_range, android.R.layout.simple_spinner_item);
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        rotationRangeSelection.setAdapter(spinnerAdapter);
+        rotationRangeSelection.setSelection(rangeIndex);
+    }
+
+    @Override
     protected void setup() {
         gyroModule.setOutputDataRate(GYR_ODR);
-        gyroModule.setAngularRateRange(GYR_RANGE);
+        gyroModule.setAngularRateRange(AVAILABLE_RANGES[rangeIndex]);
 
         AsyncOperation<RouteManager> routeManagerResult= gyroModule.routeData().fromAxes().stream(STREAM_KEY).commit();
         routeManagerResult.onComplete(dataStreamManager);

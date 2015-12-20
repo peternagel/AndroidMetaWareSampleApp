@@ -53,20 +53,20 @@ public abstract class SingleDataSensorFragment extends SensorFragment {
 
     private final ArrayList<Entry> sensorData= new ArrayList<>();
 
-    protected SingleDataSensorFragment(String sensor, String dataName, int layoutId, float samplingPeriod, float min, float max) {
-        super(sensor, layoutId, min, max);
+    protected SingleDataSensorFragment(int stringResId, String dataName, int layoutId, float samplingPeriod, float min, float max) {
+        super(stringResId, layoutId, min, max);
         csvHeaderDataName= dataName;
         this.samplingPeriod= samplingPeriod;
     }
 
-    protected SingleDataSensorFragment(String sensor, String dataName, int layoutId, float min, float max) {
-        this(sensor, dataName, layoutId, UNSPECIFIED_SAMPLING_PERIOD, min, max);
+    protected SingleDataSensorFragment(int stringResId, String dataName, int layoutId, float min, float max) {
+        this(stringResId, dataName, layoutId, UNSPECIFIED_SAMPLING_PERIOD, min, max);
     }
 
     @Override
     protected String saveData() {
         final String CSV_HEADER = String.format("time,%s%n", csvHeaderDataName);
-        String filename = String.format("%s_%tY%<tm%<td-%<tH%<tM%<tS%<tL.csv", sensor, Calendar.getInstance());
+        String filename = String.format("%s_%tY%<tm%<td-%<tH%<tM%<tS%<tL.csv", getContext().getString(sensorResId), Calendar.getInstance());
         if (!filenameExtraString.isEmpty()) {
             filename+= "_" + filenameExtraString;
         }
@@ -103,7 +103,7 @@ public abstract class SingleDataSensorFragment extends SensorFragment {
             sampleCount = 0;
         }
 
-        LineDataSet tempDataSet = new LineDataSet(sensorData, "value");
+        LineDataSet tempDataSet = new LineDataSet(sensorData, csvHeaderDataName);
         tempDataSet.setColor(Color.MAGENTA);
         tempDataSet.setDrawCircles(false);
 

@@ -30,98 +30,39 @@
   ~ contact MbientLab Inc, at www.mbientlab.com.
   -->
 
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical" android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin" >
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="@string/config_name_haptic_duty_cycle"
-        android:id="@+id/textView2"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentStart="true"
-        android:labelFor="@+id/duty_cycle_value" />
-
-    <EditText
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:inputType="number|numberDecimal"
-        android:ems="10"
-        android:id="@+id/duty_cycle_value"
-        android:layout_below="@+id/textView2"
-        android:layout_alignParentStart="true"
-        android:layout_toStartOf="@+id/duty_cycle_help"
-        android:text="100.0" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="@string/config_name_haptic_pulse_width"
-        android:id="@+id/textView3"
-        android:layout_below="@+id/duty_cycle_value"
-        android:layout_alignParentStart="true"
-        android:labelFor="@+id/pulse_width_value"/>
-
-    <EditText
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:inputType="number"
-        android:ems="10"
-        android:id="@+id/pulse_width_value"
-        android:layout_below="@+id/textView3"
-        android:layout_alignParentStart="true"
-        android:layout_toStartOf="@+id/pulse_width_help"
-        android:text="5000" />
-
-    <LinearLayout
-        android:orientation="horizontal"
+    <android.support.design.widget.TextInputLayout
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        app:hintTextAppearance="@style/EditTextLabel"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_below="@+id/pulse_width_value"
-        style="?android:attr/buttonBarStyle"
-        android:layout_alignParentStart="true">
-
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/label_haptic_start_motor"
-            style="?android:attr/buttonBarButtonStyle"
-            android:id="@+id/haptic_start_motor" />
-
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/label_haptic_start_motor"
-            style="?android:attr/buttonBarButtonStyle"
-            android:id="@+id/haptic_start_buzzer" />
-    </LinearLayout>
-
-    <!-- image source is from the bletoolbox library -->
-    <ImageButton
-        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/duty_cycle_help"
-        android:background="@android:color/transparent"
-        android:src="@android:drawable/ic_menu_help"
-        android:layout_alignTop="@+id/duty_cycle_value"
-        android:layout_alignParentEnd="true"
-        android:contentDescription="@string/description_help" />
+        android:id="@+id/duty_cycle_value_wrapper" >
 
-    <!-- image source is from the bletoolbox library -->
-    <ImageButton
-        android:layout_width="wrap_content"
+        <EditText android:id="@+id/duty_cycle_value" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:hint="@string/config_name_haptic_duty_cycle"
+            android:inputType="number|numberDecimal"
+            android:singleLine="true" />
+
+    </android.support.design.widget.TextInputLayout>
+
+    <android.support.design.widget.TextInputLayout
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        app:hintTextAppearance="@style/EditTextLabel"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/pulse_width_help"
-        android:background="@android:color/transparent"
-        android:src="@android:drawable/ic_menu_help"
-        android:layout_alignTop="@+id/pulse_width_value"
-        android:layout_toEndOf="@+id/duty_cycle_value"
-        android:contentDescription="@string/description_help"/>
-</RelativeLayout>
+        android:id="@+id/pulse_width_value_wrapper" >
+
+        <EditText android:id="@+id/pulse_width_value" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:hint="@string/config_name_haptic_pulse_width"
+            android:inputType="number"
+            android:maxLines="1" android:singleLine="true" />
+
+    </android.support.design.widget.TextInputLayout>
+
+    <include layout="@layout/layout_two_button" />
+</LinearLayout>

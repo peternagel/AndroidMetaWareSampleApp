@@ -40,6 +40,7 @@ import android.content.DialogInterface;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
@@ -49,7 +50,6 @@ import android.view.ViewGroup;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.mbientlab.metawear.AsyncOperation;
 import com.mbientlab.metawear.Message;
@@ -57,6 +57,7 @@ import com.mbientlab.metawear.MetaWearBoard;
 import com.mbientlab.metawear.MetaWearBoard.DeviceInformation;
 import com.mbientlab.metawear.RouteManager;
 import com.mbientlab.metawear.UnsupportedModuleException;
+import com.mbientlab.metawear.app.help.HelpOptionAdapter;
 import com.mbientlab.metawear.module.Led;
 import com.mbientlab.metawear.module.Switch;
 
@@ -67,7 +68,7 @@ public class HomeFragment extends ModuleFragmentBase {
     private Led ledModule;
 
     public HomeFragment() {
-        super("Home");
+        super(R.string.navigation_fragment_home);
     }
 
     public static class DfuProgressFragment extends DialogFragment {
@@ -115,14 +116,6 @@ public class HomeFragment extends ModuleFragmentBase {
     @Override
     public void onViewCreated(final View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
-        RadioButton temp= (RadioButton) view.findViewById(R.id.switch_radio_pressed);
-        temp.setEnabled(false);
-        temp.setTextColor(Color.BLACK);
-
-        temp= (RadioButton) view.findViewById(R.id.switch_radio_released);
-        temp.setEnabled(false);
-        temp.setTextColor(Color.BLACK);
 
         view.findViewById(R.id.led_red_on).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -248,8 +241,7 @@ public class HomeFragment extends ModuleFragmentBase {
                         builder.setContentTitle(getString(R.string.notify_dfu_success)).setSmallIcon(android.R.drawable.stat_sys_upload_done);
                         manager.notify(NOTIFICATION_ID, builder.build());
 
-                        Toast.makeText(getActivity(), R.string.message_dfu_success, Toast.LENGTH_SHORT).show();
-
+                        Snackbar.make(getActivity().findViewById(R.id.drawer_layout), R.string.message_dfu_success, Snackbar.LENGTH_LONG).show();
                         fragBus.resetConnectionStateHandler(5000L);
                     }
 
@@ -263,8 +255,7 @@ public class HomeFragment extends ModuleFragmentBase {
                                 .setContentText(cause.getLocalizedMessage());
                         manager.notify(NOTIFICATION_ID, builder.build());
 
-                        Toast.makeText(getActivity(), error.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
-
+                        Snackbar.make(getActivity().findViewById(R.id.drawer_layout), error.getLocalizedMessage(), Snackbar.LENGTH_LONG).show();
                         fragBus.resetConnectionStateHandler(5000L);
                     }
                 });
@@ -274,6 +265,11 @@ public class HomeFragment extends ModuleFragmentBase {
     @Override
     protected void boardReady() throws UnsupportedModuleException {
         setupFragment(getView());
+    }
+
+    @Override
+    protected void fillHelpOptionAdapter(HelpOptionAdapter adapter) {
+
     }
 
     @Override
@@ -331,8 +327,12 @@ public class HomeFragment extends ModuleFragmentBase {
 
                                     if (msg.getData(Boolean.class)) {
                                         radioGroup.check(R.id.switch_radio_pressed);
+                                        v.findViewById(R.id.switch_radio_pressed).setEnabled(true);
+                                        v.findViewById(R.id.switch_radio_released).setEnabled(false);
                                     } else {
                                         radioGroup.check(R.id.switch_radio_released);
+                                        v.findViewById(R.id.switch_radio_released).setEnabled(true);
+                                        v.findViewById(R.id.switch_radio_pressed).setEnabled(false);
                                     }
                                 }
                             });

@@ -23,19 +23,18 @@
   ~ hello@mbientlab.com.
   -->
 
-<android.support.v4.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools" android:id="@+id/drawer_layout"
-    android:layout_width="match_parent" android:layout_height="match_parent"
-    android:fitsSystemWindows="true" tools:openDrawer="start">
-
-    <include layout="@layout/app_bar_navigation" android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
-    <android.support.design.widget.NavigationView android:id="@+id/nav_view"
-        android:layout_width="wrap_content" android:layout_height="match_parent"
-        android:layout_gravity="start" android:fitsSystemWindows="true"
-        app:headerLayout="@layout/nav_header_navigation"
-        app:menu="@menu/activity_navigation_drawer" />
-
-</android.support.v4.widget.DrawerLayout>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:checkableBehavior="single">
+        <item android:id="@+id/nav_home" android:title="@string/navigation_fragment_home" android:checked="true" />
+        <item android:id="@+id/nav_accelerometer" android:title="@string/navigation_fragment_accelerometer" />
+        <item android:id="@+id/nav_barometer" android:title="@string/navigation_fragment_barometer" />
+        <item android:id="@+id/nav_gpio" android:title="@string/navigation_fragment_gpio" />
+        <item android:id="@+id/nav_gyro" android:title="@string/navigation_fragment_gyro" />
+        <item android:id="@+id/nav_haptic" android:title="@string/navigation_fragment_haptic" />
+        <item android:id="@+id/nav_ibeacon" android:title="@string/navigation_fragment_ibeacon" />
+        <item android:id="@+id/nav_light" android:title="@string/navigation_fragment_light" />
+        <item android:id="@+id/nav_neopixel" android:title="@string/navigation_fragment_neopixel" />
+        <item android:id="@+id/nav_settings" android:title="@string/navigation_fragment_settings" />
+        <item android:id="@+id/nav_temperature" android:title="@string/navigation_fragment_temperature" />
+    </group>
+</menu>
