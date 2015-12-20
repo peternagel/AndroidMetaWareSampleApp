@@ -131,6 +131,7 @@ public abstract class SensorFragment extends ModuleFragmentBase {
         initializeChart();
         resetData(false);
         chart.invalidate();
+        chart.setDescription(null);
 
         Button clearButton= (Button) view.findViewById(R.id.layout_two_button_left);
         clearButton.setOnClickListener(new View.OnClickListener() {
@@ -186,7 +187,6 @@ public abstract class SensorFragment extends ModuleFragmentBase {
         chart.clear();
         resetData(clearData);
         chart.invalidate();
-        chart.setDescription(null);
     }
 
     protected void initializeChart() {
