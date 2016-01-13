@@ -174,19 +174,36 @@ public class HomeFragment extends ModuleFragmentBase {
         view.findViewById(R.id.update_firmware).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                new AlertDialog.Builder(getActivity()).setTitle(R.string.title_firmware_update)
-                        .setPositiveButton(R.string.label_yes, new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                initiateDfu();
-                            }
-                        })
-                        .setNegativeButton(R.string.label_no, null)
-                        .setCancelable(false)
-                        .setMessage(R.string.message_dfu_accept)
-                        .show();
+                mwBoard.checkForFirmwareUpdate().onComplete(new AsyncOperation.CompletionHandler<Boolean>() {
+                    @Override
+                    public void success(Boolean result) {
+                        AlertDialog.Builder builder= new AlertDialog.Builder(getActivity());
+
+                        if (!result) {
+                            setupDfuDialog(builder, R.string.message_dfu_latest);
+                        } else {
+                            setupDfuDialog(builder, R.string.message_dfu_accept);
+                        }
+
+                        builder.show();
+                    }
+                });
+
             }
         });
+    }
+
+    private void setupDfuDialog(AlertDialog.Builder builder, int msgResId) {
+        builder.setTitle(R.string.title_firmware_update)
+                .setPositiveButton(R.string.label_yes, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        initiateDfu();
+                    }
+                })
+                .setNegativeButton(R.string.label_no, null)
+                .setCancelable(false)
+                .setMessage(msgResId);
     }
 
     private void initiateDfu() {

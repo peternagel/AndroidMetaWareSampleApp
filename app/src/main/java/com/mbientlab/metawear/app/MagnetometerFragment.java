@@ -29,32 +29,57 @@
  * contact MbientLab Inc, at www.mbientlab.com.
  */
 
-apply plugin: 'com.android.application'
+package com.mbientlab.metawear.app;
 
-android {
-    compileSdkVersion 23
-    buildToolsVersion "23.0.1"
+import com.mbientlab.metawear.AsyncOperation;
+import com.mbientlab.metawear.RouteManager;
+import com.mbientlab.metawear.UnsupportedModuleException;
+import com.mbientlab.metawear.app.help.HelpOptionAdapter;
+import com.mbientlab.metawear.module.Bmm150Magnetometer;
+import com.mbientlab.metawear.module.Bmm150Magnetometer.PowerPreset;
 
-    defaultConfig {
-        applicationId "com.mbientlab.metawear.app"
-        minSdkVersion 18
-        targetSdkVersion 23
-        versionCode 14
-        versionName "3.3.0"
+/**
+ * Created by etsai on 1/12/2016.
+ */
+public class MagnetometerFragment extends ThreeAxisChartFragment {
+    private static final float B_FIELD_RANGE= 250.f, MAG_ODR= 10.f;
+    private static final String STREAM_KEY= "b_field_stream";
+
+    private Bmm150Magnetometer magModule= null;
+
+    public MagnetometerFragment() {
+        super("field", R.layout.fragment_sensor,R.string.navigation_fragment_magnetometer,
+                STREAM_KEY, -B_FIELD_RANGE, B_FIELD_RANGE, MAG_ODR);
     }
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-        }
-    }
-}
 
-dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile 'com.mbientlab:metawear:2.4.0'
-    compile 'com.mbientlab.bletoolbox:scanner:0.2.0'
-    compile 'com.github.PhilJay:MPAndroidChart:v2.1.3'
-    compile 'com.android.support:appcompat-v7:23.1.1'
-    compile 'com.android.support:design:23.1.1'
+    @Override
+    protected void boardReady() throws UnsupportedModuleException {
+        magModule= mwBoard.getModule(Bmm150Magnetometer.class);
+    }
+
+    @Override
+    protected void fillHelpOptionAdapter(HelpOptionAdapter adapter) {
+
+    }
+
+    @Override
+    protected void setup() {
+        magModule.setPowerPrsest(PowerPreset.LOW_POWER);
+
+        AsyncOperation<RouteManager> routeManagerResult= magModule.routeData().fromBField().stream(STREAM_KEY).commit();
+        routeManagerResult.onComplete(dataStreamManager);
+        routeManagerResult.onComplete(new AsyncOperation.CompletionHandler<RouteManager>() {
+            @Override
+            public void success(RouteManager result) {
+                magModule.enableBFieldSampling();
+                magModule.start();
+            }
+        });
+    }
+
+    @Override
+    protected void clean() {
+        magModule.stop();
+        magModule.disableBFieldSampling();
+    }
 }

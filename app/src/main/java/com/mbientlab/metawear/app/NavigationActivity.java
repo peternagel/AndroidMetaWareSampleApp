@@ -79,6 +79,7 @@ public class NavigationActivity extends AppCompatActivity implements NavigationV
         tempMap.put(R.id.nav_haptic, HapticFragment.class);
         tempMap.put(R.id.nav_ibeacon, IBeaconFragment.class);
         tempMap.put(R.id.nav_light, AmbientLightFragment.class);
+        tempMap.put(R.id.nav_magnetometer, MagnetometerFragment.class);
         tempMap.put(R.id.nav_neopixel, NeoPixelFragment.class);
         tempMap.put(R.id.nav_settings, SettingsFragment.class);
         tempMap.put(R.id.nav_temperature, TemperatureFragment.class);

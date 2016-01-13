@@ -33,6 +33,7 @@
         <item android:id="@+id/nav_haptic" android:title="@string/navigation_fragment_haptic" />
         <item android:id="@+id/nav_ibeacon" android:title="@string/navigation_fragment_ibeacon" />
         <item android:id="@+id/nav_light" android:title="@string/navigation_fragment_light" />
+        <item android:id="@+id/nav_magnetometer" android:title="@string/navigation_fragment_magnetometer" />
         <item android:id="@+id/nav_neopixel" android:title="@string/navigation_fragment_neopixel" />
         <item android:id="@+id/nav_settings" android:title="@string/navigation_fragment_settings" />
         <item android:id="@+id/nav_temperature" android:title="@string/navigation_fragment_temperature" />

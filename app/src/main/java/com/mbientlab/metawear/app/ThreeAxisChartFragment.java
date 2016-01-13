@@ -83,16 +83,6 @@ public abstract class ThreeAxisChartFragment extends SensorFragment {
     }
 
     @Override
-    protected void setup() {
-
-    }
-
-    @Override
-    protected void clean() {
-
-    }
-
-    @Override
     protected String saveData() {
         final String CSV_HEADER = String.format("time,x-%s,y-%s,z-%s%n", dataType, dataType, dataType);
         String filename = String.format("%s_%tY%<tm%<td-%<tH%<tM%<tS%<tL.csv", getContext().getString(sensorResId), Calendar.getInstance());
