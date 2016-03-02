@@ -24,16 +24,26 @@
 
 package com.mbientlab.metawear.app;
 
+import android.Manifest;
+import android.annotation.TargetApi;
 import android.app.Dialog;
+import android.app.Notification;
+import android.app.NotificationManager;
 import android.app.ProgressDialog;
 import android.bluetooth.BluetoothDevice;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -41,46 +51,63 @@ import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
 import android.support.v7.app.ActionBar;
-import android.view.View;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 
+import com.mbientlab.metawear.AsyncOperation;
 import com.mbientlab.metawear.MetaWearBleService;
 import com.mbientlab.metawear.MetaWearBoard;
 import com.mbientlab.metawear.MetaWearBoard.ConnectionStateHandler;
+import com.mbientlab.metawear.MetaWearBoard.DfuProgressHandler;
 import com.mbientlab.metawear.UnsupportedModuleException;
 import com.mbientlab.metawear.app.ModuleFragmentBase.FragmentBus;
 import com.mbientlab.metawear.module.Debug;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class NavigationActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener, ServiceConnection, FragmentBus {
-    public static final String EXTRA_BT_DEVICE= "com.mbientlab.metawear.app.NavigationActivity.EXTRA_BT_DEVICE";
+public class NavigationActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener, ServiceConnection, FragmentBus, LoaderManager.LoaderCallbacks<Cursor> {
+    public final static String EXTRA_BT_DEVICE= "com.mbientlab.metawear.app.NavigationActivity.EXTRA_BT_DEVICE";
 
+    private static final int SELECT_FILE_REQ = 1, PERMISSION_REQUEST_READ_STORAGE= 2;
+    private static final String EXTRA_URI = "uri";
     private final static String FRAGMENT_KEY= "com.mbientlab.metawear.app.NavigationActivity.FRAGMENT_KEY";
-    private static final Map<Integer, Class<? extends ModuleFragmentBase>> FRAGMENT_CLASSES;
+    private final static Map<Integer, Class<? extends ModuleFragmentBase>> FRAGMENT_CLASSES;
 
     static {
         Map<Integer, Class<? extends ModuleFragmentBase>> tempMap= new LinkedHashMap<>();
         tempMap.put(R.id.nav_home, HomeFragment.class);
         tempMap.put(R.id.nav_accelerometer, AccelerometerFragment.class);
         tempMap.put(R.id.nav_barometer, BarometerFragment.class);
+        tempMap.put(R.id.nav_color_detector, ColorDetectorFragment.class);
         tempMap.put(R.id.nav_gpio, GpioFragment.class);
         tempMap.put(R.id.nav_gyro, GyroFragment.class);
         tempMap.put(R.id.nav_haptic, HapticFragment.class);
+        tempMap.put(R.id.nav_humidity, HumidityFragment.class);
         tempMap.put(R.id.nav_ibeacon, IBeaconFragment.class);
+        tempMap.put(R.id.nav_i2c, I2CFragment.class);
         tempMap.put(R.id.nav_light, AmbientLightFragment.class);
         tempMap.put(R.id.nav_magnetometer, MagnetometerFragment.class);
         tempMap.put(R.id.nav_neopixel, NeoPixelFragment.class);
+        tempMap.put(R.id.nav_proximity, ProximityFragment.class);
         tempMap.put(R.id.nav_settings, SettingsFragment.class);
         tempMap.put(R.id.nav_temperature, TemperatureFragment.class);
         FRAGMENT_CLASSES= Collections.unmodifiableMap(tempMap);
@@ -134,12 +161,45 @@ public class NavigationActivity extends AppCompatActivity implements NavigationV
         @Override
         public void onServiceDisconnected(ComponentName name) { }
     }
+    public static class DfuProgressFragment extends DialogFragment {
+        private ProgressDialog dfuProgress= null;
+
+        public static DfuProgressFragment newInstance(int messageStringId) {
+            Bundle bundle= new Bundle();
+            bundle.putInt("message_string_id", messageStringId);
+
+            DfuProgressFragment newFragment= new DfuProgressFragment();
+            newFragment.setArguments(bundle);
+            return newFragment;
+        }
+
+        @NonNull
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            dfuProgress= new ProgressDialog(getActivity());
+            dfuProgress.setTitle(getString(R.string.title_firmware_update));
+            dfuProgress.setCancelable(false);
+            dfuProgress.setCanceledOnTouchOutside(false);
+            dfuProgress.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+            dfuProgress.setProgress(0);
+            dfuProgress.setMax(100);
+            dfuProgress.setMessage(getString(getArguments().getInt("message_string_id")));
+            return dfuProgress;
+        }
+
+        public void updateProgress(int newProgress) {
+            if (dfuProgress != null) {
+                dfuProgress.setProgress(newProgress);
+            }
+        }
+    }
 
     private final String RECONNECT_DIALOG_TAG= "reconnect_dialog_tag";
-    private final Handler connectScheduler= new Handler();
+    private final Handler taskScheduler = new Handler();
     private BluetoothDevice btDevice;
     private MetaWearBoard mwBoard;
     private Fragment currentFragment= null;
+    private Uri fileStreamUri;
 
     private final ConnectionStateHandler connectionHandler= new MetaWearBoard.ConnectionStateHandler() {
         @Override
@@ -173,7 +233,7 @@ public class NavigationActivity extends AppCompatActivity implements NavigationV
         dialogFragment.show(getSupportFragmentManager(), RECONNECT_DIALOG_TAG);
 
         if (delay != 0) {
-            connectScheduler.postDelayed(new Runnable() {
+            taskScheduler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
                     mwBoard.connect();
@@ -193,6 +253,82 @@ public class NavigationActivity extends AppCompatActivity implements NavigationV
     public void resetConnectionStateHandler(long delay) {
         mwBoard.setConnectionStateHandler(connectionHandler);
         attemptReconnect(delay);
+    }
+
+    @Override
+    public void initiateDfu(final InputStream stream) {
+        final String DFU_PROGRESS_FRAGMENT_TAG= "dfu_progress_popup";
+        final NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        final Notification.Builder checkpointNotifyBuilder = new Notification.Builder(NavigationActivity.this).setSmallIcon(android.R.drawable.stat_sys_upload)
+                .setOnlyAlertOnce(true).setOngoing(true).setProgress(0, 0, true);
+        final Notification.Builder progressNotifyBuilder = new Notification.Builder(NavigationActivity.this).setSmallIcon(android.R.drawable.stat_sys_upload)
+                .setOnlyAlertOnce(true).setOngoing(true).setContentTitle(getString(R.string.notify_dfu_uploading));
+        final int NOTIFICATION_ID = 1024;
+
+        final DfuProgressHandler handler = new DfuProgressHandler() {
+            @Override
+            public void reachedCheckpoint(State dfuState) {
+                switch (dfuState) {
+                    case INITIALIZING:
+                        checkpointNotifyBuilder.setContentTitle(getString(R.string.notify_dfu_bootloader));
+                        break;
+                    case STARTING:
+                        checkpointNotifyBuilder.setContentTitle(getString(R.string.notify_dfu_starting));
+                        break;
+                    case VALIDATING:
+                        checkpointNotifyBuilder.setContentTitle(getString(R.string.notify_dfu_validating));
+                        break;
+                    case DISCONNECTING:
+                        checkpointNotifyBuilder.setContentTitle(getString(R.string.notify_dfu_disconnecting));
+                        break;
+                }
+
+                manager.notify(NOTIFICATION_ID, checkpointNotifyBuilder.build());
+            }
+
+            @Override
+            public void receivedUploadProgress(int progress) {
+                progressNotifyBuilder.setContentText(String.format("%d%%", progress)).setProgress(100, progress, false);
+                manager.notify(NOTIFICATION_ID, progressNotifyBuilder.build());
+                ((DfuProgressFragment) getSupportFragmentManager().findFragmentByTag(DFU_PROGRESS_FRAGMENT_TAG)).updateProgress(progress);
+            }
+        };
+
+
+        taskScheduler.post(new Runnable() {
+            @Override
+            public void run() {
+                DfuProgressFragment.newInstance((stream != null ? R.string.message_manual_dfu : R.string.message_dfu)).show(getSupportFragmentManager(), DFU_PROGRESS_FRAGMENT_TAG);
+                (stream != null ? mwBoard.updateFirmware(stream, handler) : mwBoard.updateFirmware(handler)).onComplete(new AsyncOperation.CompletionHandler<Void>() {
+                    final Notification.Builder builder = new Notification.Builder(NavigationActivity.this).setOnlyAlertOnce(true)
+                            .setOngoing(false).setAutoCancel(true);
+
+                    @Override
+                    public void success(Void result) {
+                        ((DialogFragment) getSupportFragmentManager().findFragmentByTag(DFU_PROGRESS_FRAGMENT_TAG)).dismiss();
+                        builder.setContentTitle(getString(R.string.notify_dfu_success)).setSmallIcon(android.R.drawable.stat_sys_upload_done);
+                        manager.notify(NOTIFICATION_ID, builder.build());
+
+                        Snackbar.make(NavigationActivity.this.findViewById(R.id.drawer_layout), R.string.message_dfu_success, Snackbar.LENGTH_LONG).show();
+                        resetConnectionStateHandler(5000L);
+                    }
+
+                    @Override
+                    public void failure(Throwable error) {
+                        Log.e("MetaWearApp", "Firmware update failed", error);
+
+                        Throwable cause = error.getCause() == null ? error : error.getCause();
+                        ((DialogFragment) getSupportFragmentManager().findFragmentByTag(DFU_PROGRESS_FRAGMENT_TAG)).dismiss();
+                        builder.setContentTitle(getString(R.string.notify_dfu_fail)).setSmallIcon(android.R.drawable.ic_dialog_alert)
+                                .setContentText(cause.getLocalizedMessage());
+                        manager.notify(NOTIFICATION_ID, builder.build());
+
+                        Snackbar.make(NavigationActivity.this.findViewById(R.id.drawer_layout), error.getLocalizedMessage(), Snackbar.LENGTH_LONG).show();
+                        resetConnectionStateHandler(5000L);
+                    }
+                });
+            }
+        });
     }
 
     @Override
@@ -248,6 +384,43 @@ public class NavigationActivity extends AppCompatActivity implements NavigationV
     }
 
     @Override
+    protected void onActivityResult(final int requestCode, final int resultCode, final Intent data) {
+        if (resultCode != RESULT_OK)
+            return;
+
+        fileStreamUri= null;
+        switch (requestCode) {
+            case SELECT_FILE_REQ:
+                // and read new one
+                final Uri uri = data.getData();
+                /*
+                 * The URI returned from application may be in 'file' or 'content' schema.
+                 * 'File' schema allows us to create a File object and read details from if directly.
+                 *
+                 * Data from 'Content' schema must be read by Content Provider. To do that we are using a Loader.
+                 */
+                if (uri.getScheme().equals("file")) {
+                    // the direct path to the file has been returned
+                    try {
+                        initiateDfu(new FileInputStream(new File(uri.getPath())));
+                    } catch (FileNotFoundException e) {
+                        Snackbar.make(findViewById(R.id.drawer_layout), R.string.error_missing_firmware, Snackbar.LENGTH_LONG).show();
+                    }
+                } else if (uri.getScheme().equals("content")) {
+                    fileStreamUri= uri;
+
+                    // file name and size must be obtained from Content Provider
+                    final Bundle bundle = new Bundle();
+                    bundle.putParcelable(EXTRA_URI, uri);
+                    getSupportLoaderManager().restartLoader(0, bundle, this);
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    @Override
     public void onBackPressed() {
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         if (drawer.isDrawerOpen(GravityCompat.START)) {
@@ -287,6 +460,11 @@ public class NavigationActivity extends AppCompatActivity implements NavigationV
                 mwBoard.disconnect();
                 finish();
                 return true;
+            case R.id.action_manual_dfu:
+                if (checkLocationPermission()) {
+                    startContentSelectionIntent();
+                }
+                break;
         }
 
         return super.onOptionsItemSelected(item);
@@ -339,5 +517,91 @@ public class NavigationActivity extends AppCompatActivity implements NavigationV
     @Override
     public void onServiceDisconnected(ComponentName name) {
 
+    }
+
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+        final Uri uri = args.getParcelable(EXTRA_URI);
+        /*
+         * Some apps, f.e. Google Drive allow to select file that is not on the device. There is no "_data" column handled by that provider. Let's try to obtain all columns and than check
+         * which columns are present.
+	     */
+        //final String[] projection = new String[] { MediaStore.MediaColumns.DISPLAY_NAME, MediaStore.MediaColumns.SIZE, MediaStore.MediaColumns.DATA };
+        return new CursorLoader(this, uri, null /*all columns, instead of projection*/, null, null, null);
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        if (data.moveToNext()) {
+            /*
+             * Here we have to check the column indexes by name as we have requested for all. The order may be different.
+             */
+            final String fileName = data.getString(data.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)/* 0 DISPLAY_NAME */);
+            final int fileSize = data.getInt(data.getColumnIndex(MediaStore.MediaColumns.SIZE) /* 1 SIZE */);
+
+            final int dataIndex = data.getColumnIndex(MediaStore.MediaColumns.DATA);
+            try {
+                if (dataIndex != -1) {
+                    initiateDfu(new FileInputStream(new File(data.getString(dataIndex /*2 DATA */))));
+                } else {
+                    initiateDfu(getContentResolver().openInputStream(fileStreamUri));
+                }
+            } catch (FileNotFoundException e) {
+                Snackbar.make(findViewById(R.id.drawer_layout), R.string.error_missing_firmware, Snackbar.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+
+    }
+
+    /**
+     * Code for content selection adapted from the nRF Toolbox app by Nordic Semiconductor
+     * https://play.google.com/store/apps/details?id=no.nordicsemi.android.nrftoolbox&hl=en
+     */
+    private void startContentSelectionIntent() {
+        final Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("application/octet-stream");
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        startActivityForResult(intent, SELECT_FILE_REQ);
+    }
+
+    @TargetApi(23)
+    private boolean checkLocationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+                checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            // Permission code taken from Radius Networks
+            // http://developer.radiusnetworks.com/2015/09/29/is-your-beacon-app-ready-for-android-6.html
+
+            // Android M Permission check
+            final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle(R.string.title_request_permission);
+            builder.setMessage(R.string.permission_read_external_storage);
+            builder.setPositiveButton(android.R.string.ok, null);
+            builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                @Override
+                public void onDismiss(DialogInterface dialog) {
+                    requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, PERMISSION_REQUEST_READ_STORAGE);
+                }
+            });
+            builder.show();
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case PERMISSION_REQUEST_READ_STORAGE: {
+                if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                    Snackbar.make(findViewById(R.id.drawer_layout), R.string.message_permission_denied, Snackbar.LENGTH_LONG).show();
+                } else {
+                    startContentSelectionIntent();
+                }
+            }
+        }
     }
 }

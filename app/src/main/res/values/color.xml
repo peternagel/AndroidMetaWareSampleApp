@@ -33,4 +33,5 @@
 <resources>
   <color name="action_text">#3D3AB0</color>
   <color name="actionBarColor">#758cc0</color>
+  <color name="actionBarColorDark">#5c6e96</color>
 </resources>

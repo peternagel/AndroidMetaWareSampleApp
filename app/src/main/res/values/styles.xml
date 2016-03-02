@@ -45,7 +45,8 @@
         <item name="android:actionBarStyle">@style/Widget.ActionBar</item>
         <item name="actionBarStyle">@style/Widget.ActionBar</item>
         <item name="android:windowBackground">@mipmap/background</item>
-
+        <item name="colorPrimary">@color/actionBarColor</item>
+        <item name="colorPrimaryDark">@color/actionBarColorDark</item>
     </style>
 
     <style name="EditTextLabel" parent="TextAppearance.AppCompat.Medium">

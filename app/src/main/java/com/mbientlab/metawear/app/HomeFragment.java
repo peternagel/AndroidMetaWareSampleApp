@@ -32,28 +32,19 @@
 package com.mbientlab.metawear.app;
 
 import android.app.Dialog;
-import android.app.Notification;
-import android.app.NotificationManager;
-import android.app.ProgressDialog;
-import android.content.Context;
 import android.content.DialogInterface;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.support.design.widget.Snackbar;
 import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AlertDialog;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 
 import com.mbientlab.metawear.AsyncOperation;
 import com.mbientlab.metawear.Message;
-import com.mbientlab.metawear.MetaWearBoard;
 import com.mbientlab.metawear.MetaWearBoard.DeviceInformation;
 import com.mbientlab.metawear.RouteManager;
 import com.mbientlab.metawear.UnsupportedModuleException;
@@ -67,34 +58,6 @@ import com.mbientlab.metawear.module.Switch;
 public class HomeFragment extends ModuleFragmentBase {
     private Led ledModule;
 
-    public HomeFragment() {
-        super(R.string.navigation_fragment_home);
-    }
-
-    public static class DfuProgressFragment extends DialogFragment {
-        private ProgressDialog dfuProgress= null;
-
-        @NonNull
-        @Override
-        public Dialog onCreateDialog(Bundle savedInstanceState) {
-            dfuProgress= new ProgressDialog(getActivity());
-            dfuProgress.setTitle(getString(R.string.title_firmware_update));
-            dfuProgress.setCancelable(false);
-            dfuProgress.setCanceledOnTouchOutside(false);
-            dfuProgress.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-            dfuProgress.setProgress(0);
-            dfuProgress.setMax(100);
-            dfuProgress.setMessage(getString(R.string.message_dfu));
-            return dfuProgress;
-        }
-
-        public void updateProgress(int newProgress) {
-            if (dfuProgress != null) {
-                dfuProgress.setProgress(newProgress);
-            }
-        }
-    }
-
     public static class MetaBootWarningFragment extends DialogFragment {
         @NonNull
         @Override
@@ -105,6 +68,10 @@ public class HomeFragment extends ModuleFragmentBase {
                     .setMessage(R.string.message_metaboot)
                     .create();
         }
+    }
+
+    public HomeFragment() {
+        super(R.string.navigation_fragment_home);
     }
 
     @Override
@@ -177,7 +144,7 @@ public class HomeFragment extends ModuleFragmentBase {
                 mwBoard.checkForFirmwareUpdate().onComplete(new AsyncOperation.CompletionHandler<Boolean>() {
                     @Override
                     public void success(Boolean result) {
-                        AlertDialog.Builder builder= new AlertDialog.Builder(getActivity());
+                        AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
 
                         if (!result) {
                             setupDfuDialog(builder, R.string.message_dfu_latest);
@@ -198,7 +165,7 @@ public class HomeFragment extends ModuleFragmentBase {
                 .setPositiveButton(R.string.label_yes, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
-                        initiateDfu();
+                        fragBus.initiateDfu(null);
                     }
                 })
                 .setNegativeButton(R.string.label_no, null)
@@ -206,79 +173,6 @@ public class HomeFragment extends ModuleFragmentBase {
                 .setMessage(msgResId);
     }
 
-    private void initiateDfu() {
-        final String DFU_PROGRESS_FRAGMENT_TAG= "dfu_progress_popup";
-        DfuProgressFragment dfuProgressDialog= new DfuProgressFragment();
-        dfuProgressDialog.show(getFragmentManager(), DFU_PROGRESS_FRAGMENT_TAG);
-
-        getActivity().runOnUiThread(new Runnable() {
-            final NotificationManager manager = (NotificationManager) getActivity().getSystemService(Context.NOTIFICATION_SERVICE);
-            final Notification.Builder checkpointNotifyBuilder = new Notification.Builder(getActivity()).setSmallIcon(android.R.drawable.stat_sys_upload)
-                    .setOnlyAlertOnce(true).setOngoing(true).setProgress(0, 0, true);
-            final Notification.Builder progressNotifyBuilder = new Notification.Builder(getActivity()).setSmallIcon(android.R.drawable.stat_sys_upload)
-                    .setOnlyAlertOnce(true).setOngoing(true).setContentTitle(getString(R.string.notify_dfu_uploading));
-            final int NOTIFICATION_ID = 1024;
-
-            @Override
-            public void run() {
-                mwBoard.updateFirmware(new MetaWearBoard.DfuProgressHandler() {
-                    @Override
-                    public void reachedCheckpoint(State dfuState) {
-                        switch (dfuState) {
-                            case INITIALIZING:
-                                checkpointNotifyBuilder.setContentTitle(getString(R.string.notify_dfu_bootloader));
-                                break;
-                            case STARTING:
-                                checkpointNotifyBuilder.setContentTitle(getString(R.string.notify_dfu_starting));
-                                break;
-                            case VALIDATING:
-                                checkpointNotifyBuilder.setContentTitle(getString(R.string.notify_dfu_validating));
-                                break;
-                            case DISCONNECTING:
-                                checkpointNotifyBuilder.setContentTitle(getString(R.string.notify_dfu_disconnecting));
-                                break;
-                        }
-
-                        manager.notify(NOTIFICATION_ID, checkpointNotifyBuilder.build());
-                    }
-
-                    @Override
-                    public void receivedUploadProgress(int progress) {
-                        progressNotifyBuilder.setContentText(String.format("%d%%", progress)).setProgress(100, progress, false);
-                        manager.notify(NOTIFICATION_ID, progressNotifyBuilder.build());
-                        ((DfuProgressFragment) getFragmentManager().findFragmentByTag(DFU_PROGRESS_FRAGMENT_TAG)).updateProgress(progress);
-                    }
-                }).onComplete(new AsyncOperation.CompletionHandler<Void>() {
-                    final Notification.Builder builder = new Notification.Builder(getActivity()).setOnlyAlertOnce(true)
-                            .setOngoing(false).setAutoCancel(true);
-
-                    @Override
-                    public void success(Void result) {
-                        ((DialogFragment) getFragmentManager().findFragmentByTag(DFU_PROGRESS_FRAGMENT_TAG)).dismiss();
-                        builder.setContentTitle(getString(R.string.notify_dfu_success)).setSmallIcon(android.R.drawable.stat_sys_upload_done);
-                        manager.notify(NOTIFICATION_ID, builder.build());
-
-                        Snackbar.make(getActivity().findViewById(R.id.drawer_layout), R.string.message_dfu_success, Snackbar.LENGTH_LONG).show();
-                        fragBus.resetConnectionStateHandler(5000L);
-                    }
-
-                    @Override
-                    public void failure(Throwable error) {
-                        Log.e("MetaWearApp", "Firmware update failed", error);
-
-                        Throwable cause= error.getCause() == null ? error : error.getCause();
-                        ((DialogFragment) getFragmentManager().findFragmentByTag(DFU_PROGRESS_FRAGMENT_TAG)).dismiss();
-                        builder.setContentTitle(getString(R.string.notify_dfu_fail)).setSmallIcon(android.R.drawable.ic_dialog_alert)
-                                .setContentText(cause.getLocalizedMessage());
-                        manager.notify(NOTIFICATION_ID, builder.build());
-
-                        Snackbar.make(getActivity().findViewById(R.id.drawer_layout), error.getLocalizedMessage(), Snackbar.LENGTH_LONG).show();
-                        fragBus.resetConnectionStateHandler(5000L);
-                    }
-                });
-            }
-        });
-    }
     @Override
     protected void boardReady() throws UnsupportedModuleException {
         setupFragment(getView());

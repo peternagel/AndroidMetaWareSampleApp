@@ -61,7 +61,7 @@ import java.util.List;
  * Created by etsai on 8/19/2015.
  */
 public class TemperatureFragment extends SingleDataSensorFragment {
-    private static final int TEMP_SAMPLE_PERIOD= 500, SINGLE_EXT_THERM_INDEX= 1;
+    private static final int TEMP_SAMPLE_PERIOD= 33, SINGLE_EXT_THERM_INDEX= 1;
     private static final String STREAM_KEY= "temp_stream";
 
     private byte gpioDataPin= 0, gpioPulldownPin= 1;

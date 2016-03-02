@@ -72,9 +72,7 @@ public abstract class SensorFragment extends ModuleFragmentBase {
         @Override
         public void run() {
             chart.notifyDataSetChanged();
-
             moveViewToLast();
-
             chartHandler.postDelayed(updateChartTask, UPDATE_PERIOD);
         }
     };
@@ -88,11 +86,12 @@ public abstract class SensorFragment extends ModuleFragmentBase {
     }
 
     private void moveViewToLast() {
+        chart.setVisibleXRangeMinimum(120);
         chart.setVisibleXRangeMaximum(120);
         if (sampleCount > 120) {
-            chart.moveViewToX(sampleCount - 121);
+            chart.moveViewToX(sampleCount - 120);
         } else {
-            chart.moveViewToX(sampleCount);
+            chart.moveViewToX(0);
         }
     }
 
@@ -150,6 +149,7 @@ public abstract class SensorFragment extends ModuleFragmentBase {
                     setup();
                     chartHandler.postDelayed(updateChartTask, UPDATE_PERIOD);
                 } else {
+                    chart.setVisibleXRangeMinimum(1);
                     chart.setVisibleXRangeMaximum(sampleCount);
                     clean();
                     if (streamRouteManager != null) {
@@ -187,6 +187,7 @@ public abstract class SensorFragment extends ModuleFragmentBase {
         chart.clear();
         resetData(clearData);
         chart.invalidate();
+        chart.fitScreen();
     }
 
     protected void initializeChart() {

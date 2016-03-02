@@ -65,7 +65,7 @@ import com.mbientlab.metawear.module.Timer;
 public class GpioFragment extends SingleDataSensorFragment {
     private static final String STREAM_KEY= "gpio_stream";
     private static final byte READ_ADC= 0, READ_ABS_REF= 1, READ_DIGITAL= 2, DEFAULT_GPIO_PIN= 0;
-    private static final int GPIO_SAMPLE_PERIOD= 500;
+    private static final int GPIO_SAMPLE_PERIOD= 33;
     private static final int[] CONTROL_RES_IDS= {
             R.id.sample_control,
             R.id.gpio_digital_up, R.id.gpio_digital_down, R.id.gpio_digital_none,

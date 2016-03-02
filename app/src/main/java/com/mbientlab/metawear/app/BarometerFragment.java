@@ -43,8 +43,11 @@ import com.mbientlab.metawear.Message;
 import com.mbientlab.metawear.RouteManager;
 import com.mbientlab.metawear.UnsupportedModuleException;
 import com.mbientlab.metawear.app.help.HelpOptionAdapter;
+import com.mbientlab.metawear.module.Barometer;
+import com.mbientlab.metawear.module.Bme280Barometer;
 import com.mbientlab.metawear.module.Bmp280Barometer;
-import com.mbientlab.metawear.module.Bmp280Barometer.*;
+import com.mbientlab.metawear.module.Bmp280Barometer.FilterMode;
+import com.mbientlab.metawear.module.Bmp280Barometer.OversamplingMode;
 
 import java.io.FileOutputStream;
 import java.util.ArrayList;
@@ -57,7 +60,7 @@ public class BarometerFragment extends SensorFragment {
     private static final float BAROMETER_SAMPLE_FREQ = 26.32f, LIGHT_SAMPLE_PERIOD= 1 / BAROMETER_SAMPLE_FREQ;
     private static String PRESSURE_STREAM_KEY= "pressure_stream", ALTITUDE_STREAM_KEY= "altitude";
 
-    private Bmp280Barometer barometerModule;
+    private Barometer barometerModule;
     private float altitudeMin, altitudeMax;
 
     private RouteManager altitudeRouteManager= null;
@@ -91,7 +94,7 @@ public class BarometerFragment extends SensorFragment {
 
     @Override
     protected void boardReady() throws UnsupportedModuleException {
-        barometerModule= mwBoard.getModule(Bmp280Barometer.class);
+        barometerModule= mwBoard.getModule(Barometer.class);
     }
 
     @Override
@@ -101,11 +104,21 @@ public class BarometerFragment extends SensorFragment {
 
     @Override
     protected void setup() {
-        barometerModule.configure()
-                .setPressureOversampling(OversamplingMode.ULTRA_HIGH)
-                .setFilterMode(FilterMode.OFF)
-                .setStandbyTime(StandbyTime.TIME_0_5)
-                .commit();
+        if (barometerModule instanceof Bmp280Barometer) {
+            ((Bmp280Barometer) barometerModule).configure()
+                    .setPressureOversampling(OversamplingMode.ULTRA_HIGH)
+                    .setFilterMode(FilterMode.OFF)
+                    .setStandbyTime(Bmp280Barometer.StandbyTime.TIME_0_5)
+                    .commit();
+            ((Bmp280Barometer) barometerModule).enableAltitudeSampling();
+        } else if (barometerModule instanceof Bme280Barometer) {
+            ((Bme280Barometer) barometerModule).configure()
+                    .setPressureOversampling(OversamplingMode.ULTRA_HIGH)
+                    .setFilterMode(FilterMode.OFF)
+                    .setStandbyTime(Bme280Barometer.StandbyTime.TIME_0_5)
+                    .commit();
+            ((Bme280Barometer) barometerModule).enableAltitudeSampling();
+        }
         barometerModule.routeData().fromPressure().stream(PRESSURE_STREAM_KEY).commit()
                 .onComplete(new AsyncOperation.CompletionHandler<RouteManager>() {
                     @Override
