@@ -92,7 +92,7 @@ public class GpioFragment extends SingleDataSensorFragment {
                         data.addXValue("0");
                         startTime= System.currentTimeMillis();
                     } else {
-                        data.addXValue(String.format("%.2f", (System.currentTimeMillis() - startTime) / 1000.f));
+                        data.addXValue(String.format("%.2f", sampleCount * samplingPeriod));
                     }
 
                     data.addEntry(new Entry(gpioValue, sampleCount), 0);
@@ -104,7 +104,7 @@ public class GpioFragment extends SingleDataSensorFragment {
     };
 
     public GpioFragment() {
-        super(R.string.navigation_fragment_gpio, "adc", R.layout.fragment_gpio, 0, 1023);
+        super(R.string.navigation_fragment_gpio, "adc", R.layout.fragment_gpio, GPIO_SAMPLE_PERIOD / 1000.f, 0, 1023);
     }
 
     @Override

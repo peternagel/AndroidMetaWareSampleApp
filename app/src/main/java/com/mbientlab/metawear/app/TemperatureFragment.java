@@ -84,7 +84,7 @@ public class TemperatureFragment extends SingleDataSensorFragment {
                 data.addXValue("0");
                 startTime = System.currentTimeMillis();
             } else {
-                data.addXValue(String.format("%.2f", (System.currentTimeMillis() - startTime) / 1000.f));
+                data.addXValue(String.format("%.2f", sampleCount * samplingPeriod));
             }
 
             data.addEntry(new Entry(celsius, sampleCount), 0);
@@ -96,7 +96,7 @@ public class TemperatureFragment extends SingleDataSensorFragment {
     private Spinner sourceSelector;
 
     public TemperatureFragment() {
-        super(R.string.navigation_fragment_temperature, "celsius", R.layout.fragment_temperature, 15, 45);
+        super(R.string.navigation_fragment_temperature, "celsius", R.layout.fragment_temperature, TEMP_SAMPLE_PERIOD / 1000.f, 15, 45);
     }
 
     @Override

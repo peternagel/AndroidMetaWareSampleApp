@@ -47,7 +47,6 @@ import java.util.List;
  * Created by etsai on 8/22/2015.
  */
 public abstract class SingleDataSensorFragment extends SensorFragment {
-    private static final float UNSPECIFIED_SAMPLING_PERIOD= 0;
     protected String csvHeaderDataName, filenameExtraString= "";
     protected float samplingPeriod;
 
@@ -60,7 +59,7 @@ public abstract class SingleDataSensorFragment extends SensorFragment {
     }
 
     protected SingleDataSensorFragment(int stringResId, String dataName, int layoutId, float min, float max) {
-        this(stringResId, dataName, layoutId, UNSPECIFIED_SAMPLING_PERIOD, min, max);
+        this(stringResId, dataName, layoutId, -1, min, max);
     }
 
     @Override
@@ -78,7 +77,7 @@ public abstract class SingleDataSensorFragment extends SensorFragment {
             LineData data = chart.getLineData();
             List<String> chartXValues= data.getXVals();
             LineDataSet tempDataSet = data.getDataSetByIndex(0);
-            if (samplingPeriod == UNSPECIFIED_SAMPLING_PERIOD) {
+            if (samplingPeriod < 0) {
                 for (int i = 0; i < chartXValues.size(); i++) {
                     fos.write(String.format("%s,%.3f%n", chartXValues.get(i), tempDataSet.getEntryForXIndex(i).getVal()).getBytes());
                 }

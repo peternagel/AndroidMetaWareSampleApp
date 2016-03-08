@@ -55,6 +55,7 @@ import static com.mbientlab.metawear.module.Ltr329AmbientLight.*;
  * Created by etsai on 8/22/2015.
  */
 public class AmbientLightFragment extends SingleDataSensorFragment {
+    private static final int LIGHT_SAMPLE_PERIOD= 50;
     private static final String STREAM_KEY= "light_stream";
 
     private int sensorGainIndex= 0;
@@ -62,7 +63,7 @@ public class AmbientLightFragment extends SingleDataSensorFragment {
     private long startTime= -1;
 
     public AmbientLightFragment() {
-        super(R.string.navigation_fragment_light, "illuminance", R.layout.fragment_sensor_config_spinner, 1, 64000f);
+        super(R.string.navigation_fragment_light, "illuminance", R.layout.fragment_sensor_config_spinner, LIGHT_SAMPLE_PERIOD / 1000.f, 1, 64000f);
     }
 
     @Override
@@ -134,8 +135,8 @@ public class AmbientLightFragment extends SingleDataSensorFragment {
     @Override
     protected void setup() {
         ltr329Module.configure().setGain(Gain.values()[sensorGainIndex])
-                .setMeasurementRate(MeasurementRate.LTR329_RATE_500MS)
-                .setIntegrationTime(IntegrationTime.LTR329_TIME_100MS)
+                .setMeasurementRate(MeasurementRate.LTR329_RATE_50MS)
+                .setIntegrationTime(IntegrationTime.LTR329_TIME_50MS)
                 .commit();
         ltr329Module.routeData().fromSensor().stream(STREAM_KEY).commit()
                 .onComplete(new AsyncOperation.CompletionHandler<RouteManager>() {
@@ -153,7 +154,7 @@ public class AmbientLightFragment extends SingleDataSensorFragment {
                                     data.addXValue("0");
                                     startTime= System.currentTimeMillis();
                                 } else {
-                                    data.addXValue(String.format("%.2f", (System.currentTimeMillis() - startTime) / 1000.f));
+                                    data.addXValue(String.format("%.2f", sampleCount * samplingPeriod));
                                 }
 
                                 data.addEntry(new Entry(lux, sampleCount), 0);

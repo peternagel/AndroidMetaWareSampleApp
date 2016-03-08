@@ -53,7 +53,7 @@ public class ProximityFragment extends SingleDataSensorFragment {
     private Timer timerModule;
 
     public ProximityFragment() {
-        super(R.string.navigation_fragment_proximity, "adc", R.layout.fragment_sensor, 0, 1024);
+        super(R.string.navigation_fragment_proximity, "adc", R.layout.fragment_sensor, PROXIMITY_SAMPLE_PERIOD / 1000.f, 0, 1024);
     }
 
     @Override
@@ -75,7 +75,7 @@ public class ProximityFragment extends SingleDataSensorFragment {
                                     data.addXValue("0");
                                     startTime = System.currentTimeMillis();
                                 } else {
-                                    data.addXValue(String.format("%.2f", (System.currentTimeMillis() - startTime) / 1000.f));
+                                    data.addXValue(String.format("%.2f", sampleCount * samplingPeriod));
                                 }
 
                                 data.addEntry(new Entry(message.getData(Integer.class), sampleCount), 0);

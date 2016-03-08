@@ -53,7 +53,7 @@ public class HumidityFragment extends SingleDataSensorFragment {
     private Timer timerModule;
 
     public HumidityFragment() {
-        super(R.string.navigation_fragment_humidity, "percentage", R.layout.fragment_sensor, 0, 100);
+        super(R.string.navigation_fragment_humidity, "percentage", R.layout.fragment_sensor, HUMIDITY_SAMPLE_PERIOD / 1000.f, 0, 100);
     }
 
     @Override
@@ -74,7 +74,7 @@ public class HumidityFragment extends SingleDataSensorFragment {
                                     data.addXValue("0");
                                     startTime = System.currentTimeMillis();
                                 } else {
-                                    data.addXValue(String.format("%.2f", (System.currentTimeMillis() - startTime) / 1000.f));
+                                    data.addXValue(String.format("%.2f", sampleCount * samplingPeriod));
                                 }
 
                                 data.addEntry(new Entry(celsius, sampleCount), 0);

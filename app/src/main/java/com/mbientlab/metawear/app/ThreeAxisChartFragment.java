@@ -52,7 +52,8 @@ import java.util.Calendar;
 public abstract class ThreeAxisChartFragment extends SensorFragment {
     private final ArrayList<Entry> xAxisData= new ArrayList<>(), yAxisData= new ArrayList<>(), zAxisData= new ArrayList<>();
     private final String dataType, streamKey;
-    private final float samplePeriod;
+    protected float samplePeriod;
+
     protected final AsyncOperation.CompletionHandler<RouteManager> dataStreamManager= new AsyncOperation.CompletionHandler<RouteManager>() {
         @Override
         public void success(RouteManager result) {
@@ -80,6 +81,13 @@ public abstract class ThreeAxisChartFragment extends SensorFragment {
         this.dataType= dataType;
         this.streamKey= streamKey;
         this.samplePeriod= 1 / sampleFreq;
+    }
+
+    protected ThreeAxisChartFragment(String dataType, int layoutId, int sensorResId, String streamKey, float min, float max) {
+        super(sensorResId, layoutId, min, max);
+        this.dataType= dataType;
+        this.streamKey= streamKey;
+        this.samplePeriod= -1.f;
     }
 
     @Override

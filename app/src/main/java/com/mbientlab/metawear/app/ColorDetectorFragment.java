@@ -133,7 +133,7 @@ public class ColorDetectorFragment extends SensorFragment {
                                     data.addXValue("0");
                                     startTime = System.currentTimeMillis();
                                 } else {
-                                    data.addXValue(String.format("%.2f", (System.currentTimeMillis() - startTime) / 1000.f));
+                                    data.addXValue(String.format("%.2f", (sampleCount * COLOR_SAMPLE_PERIOD) / 1000.f));
                                 }
 
                                 Tcs34725ColorDetector.ColorAdc adc= message.getData(Tcs34725ColorDetector.ColorAdc.class);

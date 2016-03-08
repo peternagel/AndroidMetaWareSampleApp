@@ -45,6 +45,7 @@ import com.mbientlab.metawear.UnsupportedModuleException;
 import com.mbientlab.metawear.app.help.HelpOption;
 import com.mbientlab.metawear.app.help.HelpOptionAdapter;
 import com.mbientlab.metawear.module.Accelerometer;
+import com.mbientlab.metawear.module.Bma255Accelerometer;
 import com.mbientlab.metawear.module.Bmi160Accelerometer;
 import com.mbientlab.metawear.module.Mma8452qAccelerometer;
 
@@ -62,7 +63,7 @@ public class AccelerometerFragment extends ThreeAxisChartFragment {
 
     public AccelerometerFragment() {
         super("acceleration", R.layout.fragment_sensor_config_spinner,
-                R.string.navigation_fragment_accelerometer, STREAM_KEY, -INITIAL_RANGE, INITIAL_RANGE, ACC_FREQ);
+                R.string.navigation_fragment_accelerometer, STREAM_KEY, -INITIAL_RANGE, INITIAL_RANGE);
     }
 
     @Override
@@ -78,7 +79,7 @@ public class AccelerometerFragment extends ThreeAxisChartFragment {
                 rangeIndex = position;
 
                 final YAxis leftAxis = chart.getAxisLeft();
-                if (accelModule instanceof Bmi160Accelerometer) {
+                if (accelModule instanceof Bmi160Accelerometer || accelModule instanceof Bma255Accelerometer) {
                     leftAxis.setAxisMaxValue(BMI160_RANGES[rangeIndex]);
                     leftAxis.setAxisMinValue(-BMI160_RANGES[rangeIndex]);
                 } else if (accelModule instanceof Mma8452qAccelerometer) {
@@ -112,8 +113,9 @@ public class AccelerometerFragment extends ThreeAxisChartFragment {
 
     @Override
     protected void setup() {
-        accelModule.setOutputDataRate(ACC_FREQ);
-        if (accelModule instanceof Bmi160Accelerometer) {
+        samplePeriod= 1 / accelModule.setOutputDataRate(ACC_FREQ);
+
+        if (accelModule instanceof Bmi160Accelerometer || accelModule instanceof Bma255Accelerometer) {
             accelModule.setAxisSamplingRange(BMI160_RANGES[rangeIndex]);
         } else if (accelModule instanceof Mma8452qAccelerometer) {
             accelModule.setAxisSamplingRange(MMA845Q_RANGES[rangeIndex]);
@@ -138,7 +140,7 @@ public class AccelerometerFragment extends ThreeAxisChartFragment {
 
     private void fillRangeAdapter() {
         ArrayAdapter<CharSequence> spinnerAdapter= null;
-        if (accelModule instanceof Bmi160Accelerometer) {
+        if (accelModule instanceof Bmi160Accelerometer || accelModule instanceof Bma255Accelerometer) {
             spinnerAdapter= ArrayAdapter.createFromResource(getContext(), R.array.values_bmi160_acc_range, android.R.layout.simple_spinner_item);
         } else if (accelModule instanceof Mma8452qAccelerometer) {
             spinnerAdapter= ArrayAdapter.createFromResource(getContext(), R.array.values_mma8452q_acc_range, android.R.layout.simple_spinner_item);
