@@ -70,6 +70,7 @@
   in a minute.  In the case where it is stuck in MetaBoot mode, you can manually return the board to normal by initiating a firmware update.</string>
   <string name="message_no_config">No configuration options for this panel</string>
   <string name="message_permission_denied">Read storage permission denied.  Cannot proceed with manual DFU.</string>
+  <string name="message_no_bosch_barometer">No BME280 or BMP280 temperature source available on this board</string>
 
   <string name="error_soft_reset">Cannot issue soft reset</string>
   <string name="error_fragment_bus">must implement the FragmentBus interface</string>

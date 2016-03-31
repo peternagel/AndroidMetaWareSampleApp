@@ -31,8 +31,11 @@
 
 package com.mbientlab.metawear.app;
 
+import android.Manifest;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.support.design.widget.TextInputLayout;
+import android.support.v7.app.AlertDialog;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
@@ -49,6 +52,7 @@ import com.mbientlab.metawear.RouteManager;
 import com.mbientlab.metawear.UnsupportedModuleException;
 import com.mbientlab.metawear.app.help.HelpOption;
 import com.mbientlab.metawear.app.help.HelpOptionAdapter;
+import com.mbientlab.metawear.module.Barometer;
 import com.mbientlab.metawear.module.MultiChannelTemperature;
 import com.mbientlab.metawear.module.SingleChannelTemperature;
 import com.mbientlab.metawear.module.Temperature;
@@ -73,6 +77,7 @@ public class TemperatureFragment extends SingleDataSensorFragment {
     private List<MultiChannelTemperature.Source> availableSources= null;
     private List<String> spinnerEntries= null;
     private int selectedSourceIndex= 0;
+    private boolean startBmp280= false;
     private final RouteManager.MessageHandler tempMsgHandler= new RouteManager.MessageHandler() {
         @Override
         public void process(Message message) {
@@ -108,10 +113,31 @@ public class TemperatureFragment extends SingleDataSensorFragment {
             @Override
             public void onItemSelected(AdapterView<?> parent, View innerView, int position, long id) {
                 if (tempModule instanceof MultiChannelTemperature) {
+                    MultiChannelTemperature.Source selected= availableSources.get(position);
+                    if (selected instanceof MultiChannelTemperature.BMP280) {
+                        try {
+                            mwBoard.getModule(Barometer.class).start();
+                        } catch (UnsupportedModuleException ignored) {
+                            view.findViewById(R.id.sample_control).setEnabled(false);
+
+                            final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+                            builder.setTitle(R.string.title_error);
+                            builder.setMessage(R.string.message_no_bosch_barometer);
+                            builder.setPositiveButton(android.R.string.ok, null);
+                            builder.show();
+                        }
+                    } else {
+                        try {
+                            mwBoard.getModule(Barometer.class).stop();
+                        } catch (UnsupportedModuleException ignored) {
+                        }
+
+                        view.findViewById(R.id.sample_control).setEnabled(true);
+                    }
+
                     int[] extThermResIds = new int[]{R.id.ext_thermistor_data_pin_wrapper, R.id.ext_thermistor_pulldown_pin_wrapper,
                             R.id.ext_thermistor_active_setting_title, R.id.ext_thermistor_active_setting
                     };
-
                     for (int resId : extThermResIds) {
                         if (availableSources.get(position) instanceof MultiChannelTemperature.ExtThermistor) {
                             view.findViewById(resId).setVisibility(View.VISIBLE);
